@@ -1014,3 +1014,42 @@ lint：app 目录 0 诊断；应用已重启（新代码）。
 
 打包内容：app 代码 + PySide6 + pypinyin + scraper/normalize.py + data
 （ky.db / images / thumbs）。tmp_*.py 不在 import 图里，不会进包。
+
+================================================================================
+二十六、项目推送到 GitHub（公开仓库 suzilujie/motorcycle）
+================================================================================
+需求：用户要求把项目提交到 GitHub。经确认：公开 public、仓库名 motorcycle、
+      提交范围 = 源码 + docs + 工作日志 + ky.db + images + thumbs。
+
+仓库状态：此前不是 git 仓库，也没有 .gitignore。
+
+新增 .gitignore（关键，否则会提交 585 MB 中间产物）
+  忽略：__pycache__ / *.py[cod] / .venv / build / dist / *.spec /
+        scraper/data/raw / scraper/data/backup / scraper/data/report /
+        *.db-shm / *.db-wal / logs / scraper/logs / app_backup_* / tmp_*.py
+  保留：app、scraper/*.py、docs/*.html、scripts、requirements.txt、
+        work-*.log、scraper/data/ky.db、scraper/data/images、scraper/data/thumbs
+
+提交
+  git init（本机 git 版本不支持 init -b，改用 symbolic-ref HEAD refs/heads/main）
+  git add -A -> 916 个文件 / 26.5 MB
+    其中 images 568、thumbs 299、app 21、scraper 9、docs 9、其余为根文件
+  首次提交 7ba1ac8 "chore: 初始化 KY 支架查询应用仓库（PySide6 桌面端 + 抓取脚本 + 设计稿）"
+
+推送
+  gh repo create motorcycle --public --source=. --remote=origin --push
+    第一次 push 失败：OpenSSL SSL_connect: SSL_ERROR_SYSCALL（连 github.com:443 断）
+    ——仓库本身已创建成功，只是推送失败。
+  重试 git push -u origin main 成功：* [new branch] main -> main
+  远程：https://github.com/suzilujie/motorcycle
+
+安全复核（公开仓库前提）
+  scraper/config.py 只有站点 URL、UA、抓取节流参数，无账号/cookie/代理/密钥。
+  app/ 与 scraper/ 的路径全部相对计算（os.path.dirname(__file__)），无本机绝对路径。
+  唯一可识别信息是 git 提交身份 jie.lu@xindots.com（可改仓库级 user.email 覆盖）。
+
+风险 / 待办
+  1) work-*.log 里有本机绝对路径（F:\ai.workspace\...）与内部决策记录，公开可见；
+     若不想暴露，后续可以 git rm --cached work-*.log 并加进 .gitignore（历史仍留有）。
+  2) 首次 push 出现 SSL_ERROR_SYSCALL，网络不稳时需重试。
+  3) 仓库暂无 README（按「不主动新建文档」的约定未创建）；需要时再补。
