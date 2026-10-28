@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>按支架查页「可编辑」设计稿 v1.0</title>
+<style>
+:root{
+  --bg:#0f172a; --panel:#1e293b; --panel2:#334155; --line:#334155; --edge:#475569;
+  --text:#e2e8f0; --dim:#94a3b8; --faint:#64748b; --strong:#f1f5f9;
+  --blue:#60a5fa; --green:#4ade80; --orange:#fb923c; --red:#f87171; --purple:#c4b5fd; --cyan:#67e8f9;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Microsoft YaHei UI","Segoe UI",system-ui,sans-serif;
+  font-size:16px;line-height:1.75}
+.wrap{max-width:1100px;margin:0 auto;padding:48px 32px 120px}
+h1{font-size:26px;font-weight:600;color:var(--strong);margin:0 0 8px;
+  padding-bottom:14px;border-bottom:2px solid var(--panel2)}
+h2{font-size:20px;font-weight:600;color:var(--strong);margin:44px 0 14px;
+  padding-left:12px;border-left:4px solid var(--blue);border-bottom:1px solid var(--line);
+  padding-bottom:8px}
+h3{font-size:16px;font-weight:600;color:var(--strong);margin:26px 0 10px;
+  padding-left:10px;border-left:3px solid var(--edge)}
+h4{font-size:15px;font-weight:600;color:var(--strong);margin:18px 0 8px}
+p{margin:10px 0}
+b,strong{color:var(--strong)}
+code{font-family:Consolas,monospace;font-size:13px;background:#0b1220;
+  border:1px solid var(--line);border-radius:3px;padding:1px 5px;color:var(--cyan)}
+pre{background:#0b1220;border:1px solid var(--line);border-left:3px solid var(--edge);
+  border-radius:4px;padding:14px 16px;overflow-x:auto;font-family:Consolas,monospace;
+  font-size:13px;line-height:1.65;color:#cbd5e1}
+.meta{color:var(--faint);font-size:13px;margin-bottom:26px}
+.card{background:var(--panel);border-left:3px solid var(--blue);border-radius:4px;
+  padding:12px 16px;margin:16px 0;font-size:15px}
+blockquote{margin:16px 0;padding:12px 16px;background:var(--panel);
+  border-left:3px solid var(--orange);border-radius:4px;color:var(--dim);font-size:15px}
+blockquote b{color:var(--strong)}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th{background:var(--panel2);color:var(--strong);font-weight:600;text-align:left;
+  padding:9px 12px;border:1px solid var(--edge);font-size:13px}
+td{padding:9px 12px;border:1px solid var(--line);vertical-align:top;color:var(--dim)}
+td b{color:var(--strong)}
+ul,ol{margin:10px 0;padding-left:24px;color:var(--dim)}
+li{margin:5px 0}
+li b{color:var(--strong)}
+
+/* ---------- right fixed TOC ---------- */
+.toc{position:fixed;top:64px;right:24px;width:216px;max-height:76vh;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:4px;
+  padding:12px 10px;font-size:13px;z-index:20}
+.toc h5{margin:0 0 8px;font-size:12px;color:var(--faint);font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase}
+.toc a{display:block;color:var(--dim);text-decoration:none;padding:4px 8px;
+  border-left:2px solid transparent;border-radius:2px;line-height:1.5}
+.toc a:hover{color:var(--strong);background:var(--panel2)}
+.toc a.sub{padding-left:20px;font-size:12px;color:var(--faint)}
+@media (max-width:1500px){.toc{display:none}}
+
+/* ================= app mockup shell (app's own palette) ================= */
+.app{--a-bg:#f3f3f3;--a-panel:#fafafa;--a-card:#fff;--a-input:#fff;--a-alt:#f7f7f7;
+  --a-head:#ececec;--a-line:#d4d4d4;--a-strong:#1d1d1d;--a-dim:#5c5c5c;--a-faint:#8a8a8a;
+  --a-accent:#0f6cbd;--a-sel:#dce9f7;--a-plate:#f4f4f4;--a-chip:#eef2f7;--a-chip-line:#d4d4d4;
+  --a-ok:#1a7f37;--a-warn:#b45309;--a-bad:#b91c1c;
+  background:var(--a-bg);color:var(--a-strong);border:1px solid #0a0f1c;border-radius:6px;
+  overflow:hidden;font-size:13px;line-height:1.5;margin:18px 0 6px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.06)}
+.app.darkv{--a-bg:#2c2c2c;--a-panel:#363636;--a-card:#3a3a3a;--a-input:#262626;--a-alt:#434343;
+  --a-head:#484848;--a-line:#4c4c4c;--a-strong:#f2f2f2;--a-dim:#b4b4b4;--a-faint:#868686;
+  --a-accent:#6cc9ff;--a-sel:#3c4a55;--a-plate:#ececec;--a-chip:#3f3f3f;--a-chip-line:#555;
+  --a-ok:#6cc788;--a-warn:#e3a008;--a-bad:#f1707b}
+.app .titlebar{background:var(--a-panel);border-bottom:1px solid var(--a-line);
+  padding:7px 12px;display:flex;align-items:center;gap:10px;font-size:12px}
+.app .titlebar .nm{font-weight:600;font-size:13px}
+.app .titlebar .sub{color:var(--a-faint);font-size:11px}
+.app .titlebar .right{margin-left:auto;display:flex;gap:6px}
+.app .seg{border:1px solid var(--a-line);background:var(--a-card);color:var(--a-dim);
+  padding:2px 10px;border-radius:0;font-size:11px}
+.app .seg.on{background:var(--a-accent);border-color:var(--a-accent);color:#fff;font-weight:600}
+.app .filterbar{display:flex;align-items:center;gap:8px;padding:9px 12px;
+  border-bottom:1px solid var(--a-line);font-size:11px;color:var(--a-dim)}
+.app .inp{background:var(--a-input);border:1px solid var(--a-line);border-radius:4px;
+  padding:3px 8px;color:var(--a-strong);font-size:12px;min-width:80px}
+.app .btn{background:var(--a-card);border:1px solid var(--a-line);border-radius:4px;
+  padding:4px 10px;font-size:12px;color:var(--a-strong);white-space:nowrap;display:inline-block}
+.app .btn.primary{background:var(--a-accent);border-color:var(--a-accent);color:#fff;font-weight:600}
+.app .btn.ghost{border-color:var(--a-accent);color:var(--a-accent);background:transparent}
+.app .btn.off{color:var(--a-faint);border-color:var(--a-line);background:var(--a-alt)}
+.app .split{display:flex;min-height:340px}
+.app .left{width:300px;flex:0 0 300px;padding:14px 16px;border-right:1px solid var(--a-line)}
+.app .right{flex:1;padding:10px 0 0;min-width:0}
+.app .plate{width:268px;height:200px;background:var(--a-plate);border:1px solid var(--a-line);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;
+  color:#9a9a9a;font-size:11px;letter-spacing:.1em}
+.app .num{font-family:Consolas,monospace;font-size:20px;font-weight:700;margin-top:8px}
+.app .chip{display:inline-block;background:var(--a-chip);border:1px solid var(--a-chip-line);
+  border-radius:9px;padding:0 7px;font-size:11px;color:var(--a-dim);
+  font-family:Consolas,monospace;line-height:16px}
+.app .chip.on{border-color:var(--a-accent);color:var(--a-accent)}
+.app .note{font-size:11px;color:var(--a-faint);margin-top:6px;line-height:1.55}
+.app .note b{color:var(--a-dim);font-weight:400}
+.app .row{display:flex;gap:6px;margin-top:8px}
+.app table.t{width:100%;border-collapse:collapse;font-size:12px}
+.app table.t th{background:var(--a-head);color:var(--a-dim);font-weight:400;
+  text-align:left;padding:0 8px;height:28px;border-bottom:1px solid var(--a-line);font-size:11px}
+.app table.t td{padding:0 8px;height:28px;border-bottom:1px solid var(--a-line);
+  color:var(--a-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app table.t tr:nth-child(even) td{background:var(--a-alt)}
+.app .lnk{color:var(--a-accent);font-size:11px}
+.app .lnk.bad{color:var(--a-bad)}
+.app .dot{display:inline-block;width:6px;height:6px;border-radius:3px;
+  background:var(--a-accent);margin-right:4px;vertical-align:middle}
+
+/* thumbnails inside dialogs */
+.app .thumb{width:100px;height:76px;background:var(--a-plate);border:1px solid var(--a-line);
+  border-radius:4px;position:relative;display:flex;align-items:center;justify-content:center;
+  color:#a5a5a5;font-size:10px}
+.app .thumb .x{position:absolute;top:1px;right:1px;width:16px;height:16px;line-height:14px;
+  text-align:center;border:1px solid var(--a-line);background:var(--a-card);
+  color:var(--a-dim);border-radius:3px;font-size:11px}
+.app .thumb .cov{position:absolute;left:2px;bottom:2px}
+.app .strip{display:grid;grid-template-columns:repeat(3,100px);gap:6px;margin-top:6px}
+.app .strip .add{width:100px;height:76px;border:1px dashed var(--a-line);border-radius:4px;
+  display:flex;align-items:center;justify-content:center;color:var(--a-faint);font-size:11px}
+
+/* dialog frame */
+.dlg{background:var(--a-bg);border:1px solid var(--a-line);border-radius:6px;
+  box-shadow:0 18px 40px rgba(0,0,0,.45);width:540px;margin:0 auto;padding:16px 20px 14px}
+.dlg.narrow{width:460px}
+.dlg h6{margin:0 0 2px;font-size:14px;font-weight:600;color:var(--a-strong)}
+.dlg .sub{font-size:11px;color:var(--a-faint);margin-bottom:10px}
+.dlg .field{display:flex;align-items:center;gap:8px;margin:8px 0}
+.dlg .lab{width:56px;flex:0 0 56px;font-size:12px;color:var(--a-dim);text-align:right}
+.dlg .hintrow{font-size:11px;color:var(--a-faint);margin:6px 0 0 64px}
+.dlg .hintrow.bad{color:var(--a-bad)}
+.dlg .hintrow.ok{color:var(--a-ok)}
+.dlg .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;
+  padding-top:12px;border-top:1px solid var(--a-line)}
+.app .shadowed{background:rgba(0,0,0,.35);padding:18px 0;border-radius:0}
+
+.cap{color:var(--faint);font-size:13px;margin:0 0 22px;padding-left:2px}
+.cap b{color:var(--dim);font-weight:400}
+.badge{display:inline-block;font-size:11px;border:1px solid var(--edge);border-radius:9px;
+  padding:0 8px;color:var(--dim);margin-left:6px;vertical-align:middle}
+.badge.ok{border-color:#14532d;color:var(--green)}
+.badge.no{border-color:#7f1d1d;color:var(--red)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:1100px){.cols{grid-template-columns:1fr}}
+
+@media print{
+  :root{--bg:#fff;--panel:#f7f7f7;--panel2:#e8e8e8;--line:#c8c8c8;--edge:#9a9a9a;
+        --text:#1a1a1a;--dim:#333;--faint:#555;--strong:#000;color-scheme:light}
+  body{background:#fff;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .toc{display:none}
+  .wrap{max-width:none;padding:0}
+  pre{background:#f5f5f5;color:#1a1a1a}
+  code{background:#f0f0f0;color:#0b4a6f}
+}
+</style>
+</head>
+<body>
+<nav class="toc">
+  <h5>目录</h5>
+  <a href="#s1">1 需求与范围</a>
+  <a href="#s2">2 左卡改版</a>
+  <a href="#s2-1" class="sub">2.1 布局</a>
+  <a href="#s2-2" class="sub">2.2 备注显示</a>
+  <a href="#s3">3 编辑支架弹窗</a>
+  <a href="#s3-1" class="sub">3.1 正常态</a>
+  <a href="#s3-2" class="sub">3.2 满图 / 报错态</a>
+  <a href="#s4">4 添加车型弹窗</a>
+  <a href="#s5">5 尺寸与规范</a>
+  <a href="#s6">6 数据与接口</a>
+  <a href="#s7">7 状态与异常</a>
+  <a href="#s8">8 对照与备选</a>
+  <a href="#s9">9 未落地声明</a>
+</nav>
+
+<div class="wrap">
+<h1>按支架查页「可编辑」设计稿 <span class="badge">v1.0</span></h1>
+<div class="meta">2026-10-28 · 范围：左侧支架卡（图片 + 备注可编辑，支架号只读）+ 车型列表可添加已有车型 · 状态：已实施（v1.1 按用户纠正改为「只选不建」）</div>
+
+<h2 id="s1">1 需求与范围</h2>
+<p>用户要求：<b>「这个页面要可编辑」</b>。经确认为以下三项，其余保持现状。</p>
+<table>
+  <tr><th style="width:130px">项目</th><th style="width:110px">结论</th><th>说明</th></tr>
+  <tr><td>支架图片</td><td><b>可编辑</b></td><td>本页直接增删多图、点缩略图换封面，复用 <code>ImageStrip</code></td></tr>
+  <tr><td>支架备注</td><td><b>新增字段</b></td><td><code>brackets</code> 加 <code>note</code> 列，属于支架本身（不是某条适配记录）</td></tr>
+  <tr><td>支架号</td><td><b>只读</b></td><td>用户明确「不能改号」；改号要级联 <code>fitments</code> / <code>bracket_images</code>，风险大，不做</td></tr>
+  <tr><td>车型列表</td><td><b>可新增</b></td><td>本页为当前支架新增适配记录（source = M），不用回「新增支架」页</td></tr>
+  <tr><td>表格既有编辑/删除</td><td><b>保留</b></td><td>行的「编辑 / 删除」链接照旧，不改成就地双击（方案 C 未采用）</td></tr>
+</table>
+
+<div class="card">
+  <b>设计原则（design principle）：</b>可编辑的东西分两类——支架本身（图 + 备注）走<b>弹窗</b>；
+  适配记录（品牌 / 车型 / 年款）走<b>行内链接 + 新增弹窗</b>。两者不混在一个表单里，
+  避免「改了一张图导致整页适配记录被重写」这类连带风险（cascade risk）。
+</div>
+
+<h2 id="s2">2 左卡改版</h2>
+<h3 id="s2-1">2.1 布局（现状 → 改后）</h3>
+
+<p><b>现状</b>（截图复刻）：图版只显示封面，支架号是纯文本，下方只有两个动作，无备注。</p>
+<div class="app">
+  <div class="titlebar"><span class="nm">后视镜支架查询</span><span class="sub">车型 / 支架 双向反查</span>
+    <span class="right"><span class="seg">品牌</span><span class="seg">型号</span><span class="seg on">新增</span><span class="btn">深色</span></span></div>
+  <div class="filterbar">支架号 <span class="inp">11</span> 品牌 <span class="inp" style="min-width:110px">全部品牌</span>
+    <span style="margin-left:auto">反查有少量缺口（4 条 / 0.38%），以「按车型查」为准</span></div>
+  <div class="split">
+    <div class="left">
+      <div class="plate">封面 · 268 × 240</div>
+      <div class="num">11 号</div>
+      <div class="note"><b>适配车型 14 条 · 覆盖品牌 4 个</b></div>
+      <div class="row"><span class="btn primary">复制支架号</span></div>
+      <div class="row"><span class="btn">在按车型查中查看</span></div>
+    </div>
+    <div class="right">
+      <table class="t"><tr><th style="width:34%">品牌</th><th style="width:34%">车型</th><th style="width:14%">年款区间</th><th>来源</th><th style="width:88px">操作</th></tr>
+        <tr><td>兰博基尼</td><td>Aventador</td><td>2011 – 2019</td><td><span class="dot"></span>A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>奥迪</td><td>A3 进口</td><td>2004 – 2013</td><td><span class="dot"></span>A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>奥迪</td><td>一汽奥迪A3</td><td>2014</td><td><span class="dot"></span>A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>奥迪</td><td>A6 进口</td><td>2005 – 2015</td><td><span class="dot"></span>A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>奥迪</td><td>A5（进口）</td><td>2008 – 2010</td><td><span class="dot"></span>A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>现状：</b>左卡只读；图片只能用「新增支架」页里输入 11 号时顺带改。</p>
+
+<p><b>改后</b>：图版下方多一行<b>备注</b>，动作区变成两行四按钮，新增「编辑支架」「＋ 添加车型」。</p>
+<div class="app">
+  <div class="titlebar"><span class="nm">后视镜支架查询</span><span class="sub">车型 / 支架 双向反查</span>
+    <span class="right"><span class="seg">品牌</span><span class="seg">型号</span><span class="seg on">新增</span><span class="btn">深色</span></span></div>
+  <div class="filterbar">支架号 <span class="inp">11</span> 品牌 <span class="inp" style="min-width:110px">全部品牌</span>
+    <span style="margin-left:auto">反查有少量缺口（4 条 / 0.38%），以「按车型查」为准</span></div>
+  <div class="split">
+    <div class="left">
+      <div class="plate">封面 · 268 × 240</div>
+      <div class="num">11 号</div>
+      <div class="note"><b>适配车型 14 条 · 覆盖品牌 4 个</b></div>
+      <div class="note" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--a-line)">
+        备注：原厂件 · 右侧进线<br>（爬虫抓的图偏左，实际以实车为准）
+      </div>
+      <div class="row"><span class="btn primary">复制支架号</span><span class="btn ghost">编辑支架</span></div>
+      <div class="row"><span class="btn">＋ 添加车型</span><span class="btn">在按车型查中查看</span></div>
+    </div>
+    <div class="right">
+      <table class="t"><tr><th style="width:34%">品牌</th><th style="width:34%">车型</th><th style="width:14%">年款区间</th><th>来源</th><th style="width:88px">操作</th></tr>
+        <tr><td>兰博基尼</td><td>Aventador</td><td>2011 – 2019</td><td><span class="dot"></span>A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>奥迪</td><td>A3 进口</td><td>2004 – 2013</td><td><span class="dot"></span>A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>丰田</td><td>卡罗拉</td><td>全部年款</td><td><span class="dot"></span>M</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>奥迪</td><td>A6 进口</td><td>2005 – 2015</td><td><span class="dot"></span>A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>奥迪</td><td>A5（进口）</td><td>2008 – 2010</td><td><span class="dot"></span>A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>改后：</b>「编辑支架」= 图片 + 备注（号只读）；「＋ 添加车型」= 为该支架补一条 source = M 的适配记录。</p>
+
+<h3 id="s2-2">2.2 备注显示规则</h3>
+<table>
+  <tr><th style="width:150px">场景</th><th>显示</th></tr>
+  <tr><td>备注为空</td><td>整行<b>隐藏</b>（不显示「无备注」占位，左卡保持干净）</td></tr>
+  <tr><td>1 ~ 60 字</td><td>全部显示，自动换行，最多 3 行（超过 3 行末尾加「…」）</td></tr>
+  <tr><td>超过 3 行</td><td>末尾省略，完整内容进 tooltip（hover 可见）</td></tr>
+  <tr><td>备注相关操作</td><td>只有「编辑支架」弹窗能改；不做行内双击（避免误触）</td></tr>
+</table>
+
+<h2 id="s3">3 编辑支架弹窗</h2>
+<h3 id="s3-1">3.1 正常态</h3>
+<div class="app shadowed">
+<div class="dlg">
+  <h6>编辑支架</h6>
+  <div class="sub">支架号 11 · 支架号不可修改（如需换号请到「新增支架」页新建）</div>
+
+  <div class="field">
+    <div class="lab">支架号</div>
+    <span class="inp" style="width:120px;color:var(--a-faint)">11</span>
+    <span class="chip">只读</span>
+  </div>
+
+  <div class="field" style="align-items:flex-start;margin-top:12px">
+    <div class="lab" style="padding-top:4px">图片</div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="btn">＋ 添加图片</span>
+        <span style="font-size:11px;color:var(--a-faint)">3 / 6 张 · 第一张为封面（点缩略图可换）</span>
+      </div>
+      <div class="strip">
+        <div class="thumb"><span class="x">×</span>封面<span class="chip cov">封面</span></div>
+        <div class="thumb"><span class="x">×</span>第 2 张</div>
+        <div class="thumb"><span class="x">×</span>第 3 张</div>
+        <div class="add">空位</div><div class="add">空位</div><div class="add">空位</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="field" style="margin-top:14px">
+    <div class="lab">备注</div>
+    <span class="inp" style="flex:1">原厂件 · 右侧进线</span>
+    <span class="chip">12 / 200</span>
+  </div>
+  <div class="hintrow">备注只存在本机数据库，不参与爬虫比对，也不影响反查结果。</div>
+
+  <div class="actions"><span class="btn">取消</span><span class="btn primary">保存</span></div>
+</div>
+</div>
+<p class="cap"><b>说明：</b>图片条与「新增支架」页是同一个 <code>ImageStrip</code> 组件（100×76、3 列、上限 6 张）；空位用虚线格提示还能放几张。</p>
+
+<h3 id="s3-2">3.2 满图态 / 报错态</h3>
+<div class="cols">
+  <div>
+    <div class="app shadowed">
+      <div class="dlg">
+        <h6>编辑支架</h6>
+        <div class="sub">支架号 11 · 支架号不可修改</div>
+        <div class="field"><div class="lab">图片</div>
+          <div style="flex:1"><div style="display:flex;align-items:center;gap:8px">
+            <span class="btn off">＋ 添加图片</span>
+            <span style="font-size:11px;color:var(--a-faint)">6 / 6 张 · 已满</span></div></div></div>
+        <div class="strip" style="margin-left:64px">
+          <div class="thumb"><span class="x">×</span>封面<span class="chip cov">封面</span></div>
+          <div class="thumb"><span class="x">×</span>第 2 张</div>
+          <div class="thumb"><span class="x">×</span>第 3 张</div>
+          <div class="thumb"><span class="x">×</span>第 4 张</div>
+          <div class="thumb"><span class="x">×</span>第 5 张</div>
+          <div class="thumb"><span class="x">×</span>第 6 张</div>
+        </div>
+        <div class="field" style="margin-top:14px"><div class="lab">备注</div>
+          <span class="inp" style="flex:1;color:var(--a-faint)">（无）</span><span class="chip">0 / 200</span></div>
+        <div class="actions"><span class="btn">取消</span><span class="btn primary">保存</span></div>
+      </div>
+    </div>
+    <p class="cap"><b>满 6 张：</b>「＋ 添加图片」置灰，删一张立刻恢复可用。</p>
+  </div>
+  <div>
+    <div class="app shadowed">
+      <div class="dlg">
+        <h6>编辑支架</h6>
+        <div class="sub">支架号 11 · 支架号不可修改</div>
+        <div class="field"><div class="lab">图片</div>
+          <div style="flex:1"><div style="display:flex;align-items:center;gap:8px">
+            <span class="btn">＋ 添加图片</span>
+            <span style="font-size:11px;color:var(--a-faint)">3 / 6 张</span></div></div></div>
+        <div class="field" style="margin-top:12px"><div class="lab">备注</div>
+          <span class="inp" style="flex:1">原厂件（复制来的长文本，已到 200 字上限 …）</span>
+          <span class="chip on">200 / 200</span></div>
+        <div class="hintrow bad">⚠ 备注最多 200 字，已截断后面的 6 个字</div>
+        <div class="hintrow bad">⚠ 保存失败：数据库正被别的程序占用（可能爬虫正在抓取），请稍后重试</div>
+        <div class="actions"><span class="btn">取消</span><span class="btn primary">保存</span></div>
+      </div>
+    </div>
+    <p class="cap"><b>报错：</b>提示写在弹窗内，<b>不关窗、不清输入</b>（与现有编辑弹窗同一套体验）。</p>
+  </div>
+</div>
+
+<h2 id="s4">4 添加车型弹窗（只选已有车型）</h2>
+<blockquote>
+<b>2026-10-28 用户纠正：</b>不是「新增车型」，而是「<b>在当前支架上添加车型</b>」——
+车型必须是库里<b>已经存在</b>的字典，弹窗只负责挑，不负责建。手输新品牌 / 新车型
+会造出一堆近似条目（「一汽奥迪」vs「一汽-奥迪」），那是「新增」页的职责。
+</blockquote>
+<div class="cols">
+  <div>
+    <div class="app shadowed">
+      <div class="dlg" style="width:560px">
+        <h6>添加车型</h6>
+        <div class="sub">为支架 11 号添加适配记录：只能勾选库里已有的车型</div>
+        <div style="border:1px solid var(--a-line);border-radius:4px;background:var(--a-input)">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--a-line)">
+            <span style="font-size:11px;color:var(--a-dim)">选择车型</span>
+            <span style="font-size:11px;color:var(--a-faint)">上限 200 条</span>
+            <span style="margin-left:auto;display:flex;gap:6px;align-items:center">
+              <span class="inp" style="min-width:70px;font-size:11px">全部品牌 ▾</span>
+              <span class="btn" style="padding:2px 8px">全选</span>
+              <span class="btn" style="padding:2px 8px">清空</span>
+            </span>
+          </div>
+          <div style="padding:4px 8px;border-bottom:1px solid var(--a-line);font-size:11px;color:var(--a-faint)">
+            🔍 搜索车型 / 品牌（支持拼音）
+          </div>
+          <div style="font-size:12px;line-height:2">
+            <div style="padding:0 8px;background:var(--a-sel)"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#1a86d9;border:1px solid #1a86d9;vertical-align:-2px;margin-right:6px"></span>丰田&nbsp;&nbsp;卡罗拉</div>
+            <div style="padding:0 8px"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--a-input);border:1px solid #555;vertical-align:-2px;margin-right:6px"></span>丰田&nbsp;&nbsp;雷凌</div>
+            <div style="padding:0 8px;background:var(--a-sel)"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#1a86d9;border:1px solid #1a86d9;vertical-align:-2px;margin-right:6px"></span>丰田&nbsp;&nbsp;汉兰达</div>
+            <div style="padding:0 8px"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--a-input);border:1px solid #555;vertical-align:-2px;margin-right:6px"></span>一汽丰田&nbsp;&nbsp;卡罗拉</div>
+            <div style="padding:0 8px;background:var(--a-sel)"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#1a86d9;border:1px solid #1a86d9;vertical-align:-2px;margin-right:6px"></span>广汽丰田&nbsp;&nbsp;凯美瑞</div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px"><div class="lab">年款</div>
+          <span class="inp" style="flex:1">2019-2023</span><span class="chip">2019 – 2023</span></div>
+        <div class="hintrow">留空 = 全部年款；格式支持 2019-2023 / 2019 / 2019-</div>
+        <div class="actions"><span class="btn">取消</span><span class="btn danger">添加（3 条）</span></div>
+      </div>
+    </div>
+    <p class="cap"><b>已勾选 3 条：</b>品牌下拉只筛候选，勾选跨筛选保留；按钮文案带条数。</p>
+  </div>
+  <div>
+    <div class="app shadowed">
+      <div class="dlg" style="width:560px">
+        <h6>添加车型</h6>
+        <div class="sub">为支架 11 号添加适配记录：只能勾选库里已有的车型</div>
+        <div style="border:1px solid var(--a-line);border-radius:4px;background:var(--a-input)">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--a-line)">
+            <span style="font-size:11px;color:var(--a-dim)">选择车型</span>
+            <span style="margin-left:auto;display:flex;gap:6px;align-items:center">
+              <span class="inp" style="min-width:70px;font-size:11px">奥迪 ▾</span>
+              <span class="btn" style="padding:2px 8px">全选</span>
+              <span class="btn" style="padding:2px 8px">清空</span>
+            </span>
+          </div>
+          <div style="padding:4px 8px;border-bottom:1px solid var(--a-line);font-size:11px;color:var(--a-faint)">
+            🔍 搜索车型 / 品牌（支持拼音）
+          </div>
+          <div style="font-size:12px;line-height:2">
+            <div style="padding:0 8px"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--a-input);border:1px solid #555;vertical-align:-2px;margin-right:6px"></span>奥迪&nbsp;&nbsp;A3 进口</div>
+            <div style="padding:0 8px"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--a-input);border:1px solid #555;vertical-align:-2px;margin-right:6px"></span>奥迪&nbsp;&nbsp;A6 进口</div>
+            <div style="padding:0 8px"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--a-input);border:1px solid #555;vertical-align:-2px;margin-right:6px"></span>奥迪&nbsp;&nbsp;A5（进口）</div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px"><div class="lab">年款</div>
+          <span class="inp" style="flex:1;color:var(--a-faint)">（留空）</span><span class="chip">全部年款</span></div>
+        <div class="hintrow bad">⚠ 勾选的车型在该支架下都已存在（同支架 / 车型 / 年款），未写入</div>
+        <div class="actions"><span class="btn">取消</span><span class="btn danger">添加（3 条）</span></div>
+      </div>
+    </div>
+    <p class="cap"><b>重复态：</b>全部命中判重时不关窗，改年款或换车型即可继续。</p>
+  </div>
+</div>
+<table>
+  <tr><th style="width:150px">行为</th><th>规则</th></tr>
+  <tr><td>候选来源</td><td>只来自 <code>brands</code> / <code>models</code> 两张字典表；<b>不新建</b>任何品牌或车型</td></tr>
+  <tr><td>品牌下拉</td><td>「全部品牌」+ 已有品牌；只筛候选，已勾选的车型不因切换品牌而丢失</td></tr>
+  <tr><td>搜索</td><td>支持车型 / 品牌关键字与拼音首字母（复用录入页的 CheckList）</td></tr>
+  <tr><td>上限</td><td>单次最多 200 条，超出提示分批</td></tr>
+  <tr><td>写入</td><td><code>add_manual(pairs, years_raw)</code>，来源 = M；同支架 / 车型 / 年款已存在则跳过</td></tr>
+  <tr><td>需要新车型</td><td>到「新增」页 →「＋ 新增车型」建档后再回来添加</td></tr>
+</table>
+
+<h2 id="s5">5 尺寸与规范</h2>
+<table>
+  <tr><th style="width:150px">区域</th><th style="width:150px">尺寸 / 值</th><th>约束</th></tr>
+  <tr><td>左栏宽</td><td>300 px（不变）</td><td>内含 268 px 内容宽，左右 padding 16</td></tr>
+  <tr><td>图版</td><td>268 × 240（不变）</td><td>只显示封面；其余图进弹窗看</td></tr>
+  <tr><td>备注行</td><td>11 px / 行高 1.55</td><td>最多 3 行，超出省略 + tooltip；空则整行隐藏</td></tr>
+  <tr><td>动作按钮</td><td>padding 5 × 12，圆角 4</td><td>两行各 2 个，间距 6；总宽 ≤ 268，不折行</td></tr>
+  <tr><td>编辑支架弹窗</td><td>540 px 宽</td><td>标签列 56 + 内容自适应；底部右对齐两按钮</td></tr>
+  <tr><td>添加车型弹窗</td><td>560 px 宽</td><td>勾选候选列表（复用 CheckList）+ 年款行 + 提示；按钮文案带条数</td></tr>
+  <tr><td>缩略图</td><td>100 × 76，3 列，gap 6</td><td>与新增页完全一致（同一 <code>ImageStrip</code>）</td></tr>
+  <tr><td>备注长度</td><td>200 字</td><td>输入即显示计数；超限在保存时截断并提示</td></tr>
+  <tr><td>字号</td><td>正文 13 / 数字 20 / 提示 11</td><td>沿用现有 QSS token，不新增字号</td></tr>
+  <tr><td>图片上限</td><td>6 张</td><td>与新增页一致；满则「＋」置灰</td></tr>
+</table>
+
+<h2 id="s6">6 数据与接口</h2>
+
+<h3>6.1 表结构（唯一的破坏性改动）</h3>
+<pre>brackets
+  bracket_id TEXT PRIMARY KEY
+  image_url  TEXT
+  image_file TEXT
+  note       TEXT      <b>← 新增（可空）</b>
+  updated_at TEXT
+
+迁移：启动时检查 PRAGMA table_info(brackets)，缺 note 才
+      ALTER TABLE brackets ADD COLUMN note TEXT
+      （幂等；只在第一次升级触发，触发前先写一份 data/backup/ 快照）</pre>
+<div class="card">
+  <b>为什么备注放在 brackets 而不是 fitments：</b>一条支架有 14 条适配记录，
+  备注是「这个支架本身」的属性（比如「右侧进线」）。挂在 fitments 上会重复 14 份，
+  改一次要写 14 行，撤销也麻烦。
+</div>
+
+<h3>6.2 仓储层（repository）新增方法</h3>
+<pre>Repository.brackets()                     # SELECT 增加 note 列（缓存随 reload() 失效）
+Repository.save_bracket_meta(bracket_id, note=None, images=None)
+    - 先 backup_database() 再写（与 add_manual 同一策略）
+    - 单事务内：更新 note +（images 不为 None 时）复用 _save_bracket 的整表对账
+    - note=None 表示「不动备注」，images=None 表示「不动图片」——两个参数互相独立
+    - 成功后 self.reload() 清字典缓存</pre>
+<p><b>为什么不复用 <code>add_manual()</code>：</b>它必须带 <code>pairs</code> / <code>targets</code>，
+语义是「写适配记录」，用它改备注会出现「只想改备注却顺带重算适配」的误解。
+但图片对账仍复用它的 <code>_save_bracket()</code>，不重写一套。</p>
+
+<h3>6.3 添加车型复用现有写路径</h3>
+<pre>Repository.add_manual(pairs=[(bracket_id, brand, model)…], years_raw=年款)
+    → 不传 targets：品牌 / 车型只来自字典，本弹窗不新建任何条目
+    → 判重不看 source：同支架 / 车型 / 年款已存在时只回「跳过 1 条」不写重复行
+    → source = M，两个查询页照常显示</pre>
+
+<h3>6.4 UI 层改动点</h3>
+<pre>app/pages/bracket_page.py
+    _catalog 载入时带 note；写出后 refresh_data() 重新载入
+    左卡新增：note 标签、编辑支架按钮、＋添加车型按钮
+    _after_write() 之后重新载入 _catalog，左卡备注即时更新
+
+app/bracket_dialog.py（新增）
+    BracketEditDialog(repo, bracket_id, parent)   # 图片 + 备注
+    FitmentPickDialog(repo, bracket_id, parent)   # 勾选已有车型 + 年款
+
+app/image_strip.py
+    import_image() 从 entry_forms.py 挪进来（两个消费者都要导入图片，
+    留在 entry_forms 会造成 bracket_dialog → entry_forms 的反向依赖）</pre>
+
+<h2 id="s7">7 状态与异常</h2>
+<table>
+  <tr><th style="width:210px">情况</th><th>行为</th></tr>
+  <tr><td>老库没有 note 列</td><td>启动迁移自动补列（先快照）；失败则弹错误并退出，不带病运行</td></tr>
+  <tr><td>备注超 200 字</td><td>保存时截断到 200，弹窗内提示「已截断 N 个字」，仍保存成功</td></tr>
+  <tr><td>选了读不出的图</td><td>忽略并提示「已忽略 N 张（读不出来或超出上限 6 张）」</td></tr>
+  <tr><td>删除图片</td><td>只删 <code>bracket_images</code> 行，磁盘文件保留（与新增页一致，删文件不可逆）</td></tr>
+  <tr><td>换封面</td><td>点缩略图移到首位，保存时写回 <code>brackets.image_file</code></td></tr>
+  <tr><td>添加车型重复</td><td><code>add_manual</code> 判重 → 全部命中时提示「未写入」，不关窗</td></tr>
+  <tr><td>数据库被爬虫占锁</td><td>转成「数据库正被别的程序占用，请稍后重试」，弹窗不关</td></tr>
+  <tr><td>爬虫再次抓同一支架</td><td><code>upsert_bracket</code> 只覆盖 image_url / image_file / updated_at，<b>不动 note</b></td></tr>
+  <tr><td>打包版（dist/）</td><td>老 exe 不认识 note 列，但 SQLite 允许多余列，读旧字段不受影响；下次重新打包才带上新功能</td></tr>
+</table>
+
+<h2 id="s8">8 对照与备选</h2>
+<table>
+  <tr><th style="width:190px">能力</th><th style="width:210px">现状</th><th>改后</th></tr>
+  <tr><td>支架图片</td><td>只能去「新增支架」页输入同号间接改</td><td><b>本页弹窗直接改</b>（多图 / 封面 / 删除）</td></tr>
+  <tr><td>支架备注</td><td>不存在</td><td><b>新增字段，左卡显示，弹窗编辑</b></td></tr>
+  <tr><td>支架号</td><td>只读</td><td>只读（用户明确不改号）</td></tr>
+  <tr><td>新增适配记录</td><td>只能去「新增支架」页勾选已有车型</td><td><b>本页弹窗从字典勾选已有车型（不新建字典）</b></td></tr>
+  <tr><td>修改 / 删除适配记录</td><td>行内「编辑 / 删除」+ 弹窗</td><td>不变</td></tr>
+</table>
+
+<h3>未采用的方案</h3>
+<ul>
+  <li><b>B 只做图片管理：</b>号打错的场景仍无解；用户还要备注与新增车型，收益不够。</li>
+  <li><b>C 表格就地双击编辑：</b>要改 <code>models.py</code> 的 <code>DictTableModel</code> 与
+    <code>delegates.py</code>，与现有「编辑 / 删除」链接交互重复，回归面最大。</li>
+  <li><b>改支架号（级联重命名）：</b>用户明确否决；且已落盘文件名 <code>bracket_&lt;id&gt;_NN.jpg</code>
+    不会跟着改，会出现「号变了、图名还是旧号」的长期脏数据。</li>
+  <li><b>左卡多图轮播（大图翻页）：</b>左卡只有 268 × 240，轮播控件会挤压备注与按钮区，
+    多图统一进弹窗看。</li>
+</ul>
+
+<h2 id="s9">9 实施状态</h2>
+<blockquote>
+<b>v1.1（2026-10-28）已实施：</b><code>brackets.note</code> 迁移、<code>save_bracket_meta()</code>、
+「编辑支架」与「添加车型」两个弹窗、左卡备注与按钮组均已上线。
+按用户纠正，「添加车型」弹窗改为<b>只勾选库里已有车型</b>（<code>FitmentPickDialog</code>），
+不再支持手输新建品牌 / 车型。设计稿中的尺寸与配色为近似预览，实际以 QSS token 为准。
+</blockquote>
+
+</div>
+</body>
+</html>

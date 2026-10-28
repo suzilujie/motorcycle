@@ -1,0 +1,29 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# ---------- 构建产物 ----------
+build/
+dist/
+*.spec
+
+# ---------- 抓取缓存与历史备份（体积大、可重建） ----------
+scraper/data/raw/
+scraper/data/backup/
+scraper/data/report/
+
+# SQLite 运行时旁路文件（-shm / -wal 随进程产生，不该入库）
+*.db-shm
+*.db-wal
+
+# ---------- 运行时日志 ----------
+logs/
+scraper/logs/
+
+# ---------- 旧代码备份 ----------
+app_backup_*/
+
+# ---------- 临时调试脚本 ----------
+tmp_*.py

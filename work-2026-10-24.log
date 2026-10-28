@@ -1,0 +1,408 @@
+2026-10-24 工作日志 —— motorcycle / KY 支架数据抓取（szky1688.com/ky/）
+
+================================================================================
+一、背景与需求（Background / Requirement）
+================================================================================
+- 目标站点：http://www.szky1688.com/ky/ ，「康业科技发展(惠州)有限公司」的
+  「专用后视镜支架查询系统」（rear-view mirror bracket lookup system）。
+- 用户提问：该站数据能否抓取。经只读探测（read-only probe）确认可抓后，
+  用户在 A/B/C 三方案中选定【方案 C - 抽样】：
+    A 路：按支架遍历 /Car_show/?idd=X（全量 300 个型号）
+    B1 路：按车型遍历 /Car/ → /Car2/（全量 269 品牌 → 全部车型清单）
+    B2 路：/Products/?BigClassName=&SmallClassName= 抽样 20%
+  + 抓取图片（支架大图 + 品牌 logo）
+- 交叉校验（cross-validation）：以 (品牌, 车型规范化名, 年款) 为键，比对
+  A/B 两路的支架号，输出 MATCH / CONFLICT / CONFLICT_LOW / ONLY_A / ONLY_B。
+
+================================================================================
+二、站点探测结论（Probe Findings，均为实测）
+================================================================================
+- 技术形态：纯服务端渲染（server-side rendering）静态 HTML，IIS 10.0 + ASP，
+  无 AJAX / 无登录 / 无验证码 / 无 Token / 无分页（pagination）。
+- robots.txt：返回 IIS 404（不存在）。无反爬（anti-bot）迹象。
+- 【关键坑 1】编码：页面 charset=gb2312。URL 查询串必须用 GBK 做百分号编码
+  （percent-encoding）；用 UTF-8 编码实测得到乱码「濂ヨ开」且列表为空。
+  响应体必须用 GB18030 解码。
+- 【关键坑 2】命名不一致：A 路的车型名不含品牌前缀（「搏胜」），B 路含前缀
+  （「中国重汽搏胜」）。已用 canonical_model(brand, model) 规则对齐：
+  模型名不以品牌开头时补品牌前缀。
+- 年款（year）共有 4 种原始格式：
+    1) "2020款 2021款 2022款"   枚举
+    2) "2017款到2019款"         区间
+    3) "14款，15款，16款"        两位年 → 2014/2015/2016
+    4) "全系"                   → NULL（表示全部年款）
+- 规模实测（scale sampling）：奥迪 52 / 本田 43 / 丰田 62 / 五菱 41 /
+  大众 71 / 宝马 55，均值 ≈54 车型/品牌 → 全站约 14,500 个车型。
+  故 B2 全量约 29,300 请求（3.5~6 小时），本次按抽样 20%（约 2,900 请求）。
+- /Search/?Keyword= 空关键字仅返回 478 条且页面缺 <html> 头 → 有截断，
+  不可作为全量数据源（已在方案中排除）。
+
+================================================================================
+三、本次新增文件（New Files）
+================================================================================
+目录：motorcycle/scraper/（项目原为空目录，本次为纯新增）
+  config.py         配置：路径、URL 模板、并发、限速、采样率
+  http_client.py    GBK 编码/解码、全局限速、重试退避、磁盘缓存（断点续爬）
+  normalize.py      年款归一化、文本清洗、模型名规范化 canonical_model
+  store.py          SQLite 建表与 upsert（brands/models/brackets/fitments/
+                    crosscheck），时间统一写本地时区（UTC+8）
+  parse_bracket.py  A 路解析：/2 型号列表、/Car_show 适配车型块
+  parse_model.py    B 路解析：/Car/ 品牌、/Car2/ 车型、/Products/ 适配支架
+  crosscheck.py     交叉校验 + data/report/crosscheck.csv + 冲突率统计
+  images.py         支架大图与品牌 logo 二进制下载（保留原始扩展名）
+  run.py            CLI：brackets / catalog / products / images / crosscheck /
+                    stats / all
+目录：motorcycle/
+  start.ps1         一键启动入口（遵循「启动脚本统一命名 start」约定）
+  work-2026-10-24.log  本文件
+
+运行产物（未入库）：scraper/data/raw（HTML 缓存）、data/ky.db、
+  data/images、data/report、logs/scraper.log
+
+================================================================================
+四、技术决策（Technical Decisions）
+================================================================================
+1. 语言/依赖：Python 3.13.15（本机全局）+ 零第三方依赖（stdlib only）。
+   理由：GBK 处理与 SQLite 是 Python 强项；本机全局 Python 已装 torch，
+   避免 pip 安装污染环境。
+2. 并发与限速：WORKERS=3、全局最小间隔 MIN_INTERVAL=0.5s（峰值 ≤2 req/s）。
+   理由：对方是单机 IIS 无 CDN，需克制；可通过 --workers/--interval 调整。
+3. 断点续爬：所有原始 HTML 按 URL md5 落盘到 data/raw，重跑直接命中缓存，
+   站点改版后可用缓存重解析（re-parse）而无需重爬。
+4. 数据库唯一约束：fitments(source, bracket_id, brand, model, years_raw)
+   UNIQUE + INSERT OR IGNORE，保证重复运行幂等（idempotent）。
+5. 图片扩展名：站点混用 .jpg/.png，按 URL 原扩展名保存，避免格式错配。
+
+================================================================================
+五、执行记录（Execution Log）
+================================================================================
+09:13  冒烟测试（smoke test）通过：5 个真实请求验证全部解析器
+         - /2 → 300 个支架 id（1, 2, 3A, 3B, 4, 5...）
+         - /Car_show/?idd=1 → 914 条适配车型，年款归一化正确
+         - /Car/ → 269 品牌（含 logo）
+         - /Car2/?BigClassName=奥迪 → 26 个车型（去重后）
+         - /Products/ 奥迪&上汽奥迪Q6 → 解析出支架 141 号
+09:13  后台启动 route A（PID 26928）：python -Xutf8 -u run.py brackets
+09:14  进度 50/300，errors=0（约 7 分钟可完成 300 页）
+09:18  route A 首轮完成：299/300 成功，1 个失败
+       报错：'ascii' codec can't encode character '\u6b3e'
+       根因：/2 页里有一个支架 id 含中文「254B款」，urllib 要求 URL 为 ASCII
+       修复：CAR_SHOW_URL 的 idd 参数改用 gbk_encode()（与其它参数一致）
+09:23  重跑 route A：300/300 成功，fitments_A = 4117
+09:30  route B1 完成：269 品牌 + 1479 个车型
+       【估算修正】此前按「52 个车型/品牌」推算全站约 14500 个车型，实际
+       /Car2 页面里每个车型出现两次（href + 文本），去重后仅约 5.5 个/品牌，
+       全站实为 1479 个车型。故 B2 全量只需 1479 请求（约 12~14 分钟）。
+09:36  route B2 抽样（20%）完成：372 页 → fitments_B = 476
+09:47  images 首轮完成：454 张（185 支架图 + 269 品牌 logo）
+09:50  crosscheck 首轮：7299 个键，MATCH 578 / ONLY_A 6169 / ONLY_B 552，
+       冲突率 0.00%；但 summary 显示 crosscheck=0 → 结果未落库
+10:21  补图完成：新增 114 张 → 共 568 张（299 支架图 + 269 logo，1 个支架无图）
+10:35  B2 升级为全量（用户确认）：1479 页 → fitments_B = 1974，总 6091 条
+       crosscheck 8943 行：MATCH 2575 / ONLY_A 4172 / ONLY_B 2196，冲突 0
+10:53  年份缺陷修复后重建（见第七节），最终 crosscheck = 8942 行
+
+================================================================================
+六、影响范围与风险（Impact / Risks）
+================================================================================
+影响范围：
+  - 项目目录 motorcycle/ 原为空，本次为纯新增，未修改任何既有代码。
+  - 不占用任何端口（纯离线爬虫），不影响其它项目。
+风险与缓解：
+  1. 对方站点压力：限速 0.5s + 并发 3，失败自动指数退避；如被限流可下调
+     --workers 1 --interval 2。
+  2. 解析脆弱性：依赖正则匹配 table 嵌套结构，站点改版会失效
+     → 已保留 raw HTML 缓存，可改正则后重解析不重爬。
+  3. 数据版权：页面有明确「版权所有」声明，抓取结果仅限内部使用，
+     不对外再分发/转售；图片同样仅限内部使用。
+  4. 冲突率未知：若 A/B 冲突率偏高，说明站点自身数据不自洽，需人工判定
+     后再决定是否补跑 B2 全量。实测冲突率 0.00%，两路数据自洽。
+
+================================================================================
+七、缺陷修复记录（Defects Found & Fixed）
+================================================================================
+D1 支架 id 含中文导致 URL 编码失败
+   现象：'ascii' codec can't encode character '\u6b3e'（254B款）
+   修复：run.py stage_brackets 的 worker 对 idd 调用 http_client.gbk_encode()
+   影响：仅 1 个支架页；修复后 300/300 成功。
+
+D2 crosscheck 结果未落库
+   现象：CSV 已写出 7299 行，但 SQLite crosscheck 表为 0 行
+   根因：crosscheck.run() 未调用 store.replace_crosscheck()，且未 commit
+   修复：run() 内先 replace_crosscheck(conn, rows) 再 conn.commit()
+
+D3 支架图正则只认 .jpg，漏掉 .png
+   现象：300 个支架里 115 个 image_url 为 NULL
+   根因：IMAGE_RE 硬编码 \.jpg，而站点混用 jpg/png
+   修复：IMAGE_RE 改为 (?:jpg|jpeg|png|gif|webp)；用 raw 缓存重解析
+        （301 页命中缓存、0 网络请求）补全 URL，再补下 114 张。
+
+D4 站点年份录入错误被当成合法区间（数据缺陷，非代码 bug）
+   现象：原始数据存在 "2001款到20004款"，正则解析为 start=2001/end=4，
+        交换后生成 range(4, 2002) ≈ 1998 个年份键，污染 crosscheck
+   修复：normalize.py 增加 is_valid_year()（1980~2035），区间端点任一非法
+        则降级为「枚举模式」并过滤非法年份；该条最终只保留 2001
+   验证：SELECT ... WHERE year_from < 1980 → 0 行
+
+================================================================================
+八、最终数据（Final Dataset，10:53 重建后）
+================================================================================
+  支架 brackets        300（含图 299）
+  品牌 brands          269（含 logo 269）
+  车型 models          1479
+  适配关系 fitments    6091（A 路 4117 + B 路 1974）
+  交叉校验 crosscheck  8942
+     MATCH              2574 (28.79%)
+     ONLY_A             4172 (46.66%)
+     ONLY_B             2196 (24.56%)
+     CONFLICT / LOW     0    → 冲突率 0.00%
+  图片 568 张（299 支架大图 + 269 品牌 logo）
+  原始 HTML 缓存 2917 份（data/raw，可离线重解析）
+
+  产物路径：
+    scraper/data/ky.db                     SQLite 主库
+    scraper/data/report/crosscheck.csv     校验明细
+    scraper/data/report/health.txt         数据体检报告
+    scraper/data/images/                   图片
+    scraper/logs/*.log                     各阶段日志
+
+================================================================================
+九、结论与遗留项（Conclusions / TODO）
+================================================================================
+1. 冲突率 0.00%：该站「支架→车型」与「车型→支架」两个视角数据自洽，
+   可作为可信数据源使用。
+2. 【结论已更正，见第十一节 D5/D6】原报 ONLY_B 2196（24.56%）并归因为
+   「站点反向索引缺失」，经复盘的结论是：其中绝大部分是本项目解析器缺陷
+   造成的假差异（车型名尾部混入年款 → crosscheck 键对不上）。修复解析器后
+   重建，ONLY_B 降为 59 条（0.61%），其余 4,934 条 ONLY_A 主要是「全部年款」
+   口径差异。真实反向索引缺口仅 59 条，影响面很小。
+   使用建议仍然成立：以 B 路（车型维度）为准，A 路作补充。
+3. ONLY_A 4172（46.66%）：其中 1356 条为「全系」（无具体年款），A 路粒度
+   更粗，是两路口径差异而非数据错误。
+4. A 路覆盖 3541 个车型写法、B 路 1479 个：A 路车型命名更细（含年款变体与
+   不同写法），已用 canonical_model() 对齐品牌前缀，仍未完全归一。
+5. 遗留待办（未执行，需用户确认）：
+   - 是否需要导出为 JSON/Excel 供后续（如 App）使用
+   - 是否需要定期增量重爬（站点更新时间未知，可加 updated_at 比对）
+   - 1 个支架（无图）需人工确认是否站点本身缺失
+6. 合规提醒：数据仅限内部使用，版权归康业科技发展(惠州)有限公司，
+   不对外再分发或转售。
+
+================================================================================
+十、桌面应用设计稿（Desktop App Design，仅设计未编码）
+================================================================================
+11:0x  产出 docs/桌面查询应用设计稿.html（v1.0），已在默认浏览器打开
+       - 定位：离线桌面查询工具（offline desktop query tool），只读 SQLite，
+         不做增删改；用户为修理厂师傅/配件销售/电商客服
+       - 6 个查询维度（query dimensions）：
+           Q1 按车型查支架 model→bracket（主维度，source B 优先）
+           Q2 按支架查车型 bracket→models（反向，source A）
+           Q3 按年款区间查 year range（区间重叠 + 全系开关）
+           Q4 品牌覆盖分析 brand coverage（models LEFT JOIN fitments 求缺口）
+           Q5 数据差异查询 data diff（直读 crosscheck）
+           Q6 支架图册 visual browse（看图选号，点图直达 Q2）
+         + 第 7 入口：顶部全局搜索（跨品牌/车型/支架号模糊匹配并跳转）
+       - 界面：4 个窗口态可视化（Q1 结果态 / Q2 反向态 / 空态 / Q6 图册态），
+         逻辑尺寸 1280×800，Windows 11 深色真实系统色
+         （#202020 底 / #2b2b2b 面板 / #4cc2ff 强调 / #e6e6e6 文字）
+       - 含：逐区规范表、与现状对照表、技术选型对比表、SQL 示例、风险表
+       - 技术选型：推荐 A（Python 3.13 + PySide6 + sqlite3，与爬虫同栈可复用
+         config/normalize/store）；备选 B(Electron+React+better-sqlite3)、
+         C(Tauri2+Rust)、D(本地 Web + FastAPI，需占端口建议 15700)
+       - 状态：未落地（not implemented）。未写应用代码、未安装任何依赖、
+         未修改 scraper/ 下任何文件。等用户拍板：① 技术选型 ② 是否打包 exe
+         ③ 是否需要增量更新识别
+
+================================================================================
+十一、数据解析缺陷第二轮修复（D5 / D6）与结论更正
+================================================================================
+背景：桌面应用数据层完成自检时（app/tmp_test_db.py + app/tmp_probe_data.py），
+发现 A 路数据存在两类系统性错误，均属抓取端解析缺陷，非数据源问题。
+
+D5 车型名尾部混入年款（1,237 条，最严重）
+   现象：model = "ACADIA 2007款到2013款" / "大切诺基（国产） 2004款"，
+        且 years_raw 为空或残缺
+   根因：Car_show 页部分条目没有 <p>年款</p> 包裹，也没有双分隔符，
+        格式是「品牌 &nbsp;车型 2007款到2013款」（单个空格），
+        原 split_model_years 只在 <p> 或「2 个以上分隔符」处切分，
+        导致整串被当成车型名
+   修复：normalize.split_model_years 增加第三分支——在第一个年款 token
+        （YEAR_TOKEN = \d{2,4}\s*款）处切分，前段为车型、后段并入年款
+   影响：修复后 crosscheck 键能正确对齐
+
+D6 年款漏识别
+   现象：years_raw = "全部"（440 条）或纯数字 "2009"（无「款」字）→
+        year_from/year_to 为 NULL
+   根因：normalize 只识别「全系」，且 YEAR_RE 强制要求「款」字
+   修复：① ALL_YEAR_WORDS = ("全系", "全部")；
+        ② YEAR_RE 改为 (\d{2,4})\s*款?（款字可选），
+           非年份数字仍由 is_valid_year(1980~2035) 过滤
+
+重建结果（12:01，全部命中 raw 缓存，0 网络请求）：
+   fitments     6,095（A 4,121 / B 1,974）
+   crosscheck   9,728
+     MATCH      4,735 (48.67%)
+     ONLY_A     4,934 (50.72%)
+     ONLY_B        59 (0.61%)   ← 修复前 2,196 (24.56%)
+     CONFLICT       0           冲突率仍 0.00%
+
+【重要更正】此前「站点反向索引缺失 24.56%」的结论不成立：那 2,196 条
+绝大多数是本项目解析缺陷造成的假差异。真实缺口只有 59 条。
+已同步更正：docs/桌面查询应用设计稿.html（3 处）、
+app/pages/bracket_page.py 提示语、app/pages/diff_page.py 说明。
+
+================================================================================
+十二、桌面应用开发进展（PySide6，进行中）
+================================================================================
+技术栈（用户确认：内部自用，L0 不做逆向防护）：
+  Python 3.13.15（独立 .venv）+ PySide6(Essentials) + stdlib sqlite3（只读）
+  + Pillow/openpyxl（本机已有）
+
+新增文件：
+  app/config.py        路径、应用名、Windows 11 暗色配色表
+  app/db.py            只读数据层：字典缓存 + Q1~Q6 六个查询 + 补索引
+  app/models.py        DictTableModel（dict 行 → Qt 表格模型）
+  app/thumbs.py        缩略图磁盘缓存（data/thumbs，Q6 图册用）
+  app/theme.py         Windows 11 暗色 QSS
+  app/ui.py            Page 基类、支架卡片、卡片横条、KPI 磁贴、图片标签
+  app/main.py          主窗口：工具栏全局搜索 + 6 Tab + 状态栏 + 跨页跳转
+  app/pages/__init__.py
+  app/pages/model_page.py     Q1 按车型查支架（卡片条 + 明细表）
+  app/pages/bracket_page.py   Q2 按支架查车型（大图 + 明细）
+  app/pages/year_page.py      Q3 按年款区间
+  app/pages/coverage_page.py  Q4 品牌覆盖（5 个 KPI + 缺口清单）
+  app/pages/diff_page.py      Q5 数据差异（+ 导出 CSV）
+  app/pages/gallery_page.py   Q6 支架图册（IconMode 网格 + 分页）
+
+数据层自检（已完成，全部通过）：
+  stats 300/269/1479/6091/8942；Q1~Q6 均有数据；
+  Q4 奥迪：26 车型 / 24 有适配 / 覆盖 7 个支架 / 缺口 2 个
+
+依赖安装问题（未解决）：
+  清华镜像 pypi.tuna.tsinghua.edu.cn 返回 "No matching distribution found
+  for PySide6 (from versions: none)"；官方源正常，可解析 PySide6 6.12.0
+  （cp310-abi3，支持 3.13）。改为安装 PySide6-Essentials（跳过 WebEngine/
+  3D 等，体积小很多）。该安装命令两次审批超时未执行，待重试。
+
+================================================================================
+十三、依赖安装、首次运行与 UI 验证（15:0x ~ 15:30）
+================================================================================
+13.1 PySide6 安装（三次尝试）
+  a) 清华镜像 → 失败：No matching distribution found（镜像未同步该包）
+  b) 官方源 files.pythonhosted.org → 失败：
+     SSL: UNEXPECTED_EOF_WHILE_READING（防火墙中断大文件下载）
+  c) 阿里云镜像 mirrors.aliyun.com/pypi/simple/ → 成功
+     PySide6-Essentials 6.12.0（82.2 MB）+ shiboken6 6.12.0
+  结论：国内环境下 pip 装 Qt 系包必须走阿里云镜像。
+
+13.2 首次启动
+  .venv\Scripts\python.exe app\main.py → 正常显示主窗口（PID 9032）
+  6 个 Tab 全部渲染成功，状态栏显示数据统计。
+  验证方法：新增临时脚本 app/tmp_grab_ui.py，用 Qt 的 QWidget.grab()
+  离屏截取每个 Tab（比系统截屏可靠，不受窗口遮挡影响），
+  产物：logs/ui_q1_model.png ~ ui_q6_gallery.png。
+
+13.3 UI 缺陷修复
+  U1 卡片条「疑似被截断」——经 app/tmp_geom.py 打印几何确认：
+     strip 宽 1256px、5 张卡片各 150px 完整显示，**并非 bug**。
+     原因是我把 1280→1080 的截图缩放（0.84）误读成截断。
+     顺手把 CardStrip 从 QScrollArea 简化为 QFrame + QHBoxLayout
+     （MAX_CARDS=6），代码更短、行为确定。
+  U2 文案硬编码旧数值（59 条 / 0.61%）→ 改为从 diff_counts() 动态计算
+  U3 格式化字符串崩溃：ValueError: unsupported format character
+     根因："冲突率 0.00%（..." 里的裸 % 被当成格式符，需写 0.00%%
+
+13.4 数据缺陷 D7 / D8（第二轮，来自界面自查）
+  D7 车型名混入「全部 / 全系」年份词
+     现象：model = "DS 5 全部"、"悍马H1 全部"（A 路 95 条 + 全系 3 条）
+     根因：站点用「全部」表示全系年款，split_model_years 只切「N款」
+     修复：else 分支增加 ALL_YEAR_WORDS 的 rfind 切分
+  D8 model 只剩年款时被当成车型名
+     现象：model = "2022款"、"2023款 2024款 2025款"
+     根因：兜底逻辑 `if not head and tail: head, tail = tail, ""` 会把
+          年份串顶替成车型名
+     修复：head 为空时直接返回 ("","")，由 parse_fitments 丢弃该行
+     附带：parse_fitments 过滤 model 属于 ALL_YEAR_WORDS 的无效行
+
+13.5 最终数据（第五次重建，15:26，全部命中 raw 缓存，0 网络请求）
+   brackets    300（299 有图）
+   brands      269（269 logo）
+   models      1,479
+   fitments    6,086（A 4,112 / B 1,974）
+   crosscheck  9,676
+     MATCH     4,778 (49.38%)
+     ONLY_A    4,882 (50.45%)
+     ONLY_B       16 (0.17%)   ← 最初 2,196 (24.56%)，改善约 137 倍
+     CONFLICT      0           冲突率 0.00%
+   images      568 张，raw 缓存 2,917 份
+
+13.6 当前状态
+  - 应用已启动（PID 4332），6 个 Tab 全部实测可用
+  - .\start.ps1 app 可作为日常启动入口
+  - 临时脚本已全部清理（tmp_grab_ui / tmp_geom / tmp_q / tmp_probe_data /
+    tmp_reset）
+  - 截图 PNG 保留在 logs/ 供比对
+  - 未做：打包 exe、增量更新提示、导出 Excel（当前仅 CSV）
+
+================================================================================
+十四、界面瘦身：删除 4 个 Tab（方案 B）16:13
+================================================================================
+14.1 需求
+  用户反馈「按年款 / 品牌覆盖 / 数据差异 / 图册」4 个 Tab 用处不大，要求去掉；
+  确认采用方案 B（彻底清理：页面文件 + 数据层方法一起删）。
+
+14.2 改动文件
+  app/main.py
+    - 删除 import：CoveragePage / DiffPage / GalleryPage / YearPage
+    - 删除 4 个页面的实例化与 addTab 条目，Tab 只剩「按车型查」「按支架查」
+    - _connect_pages 去掉 gallery_page.open_bracket 连接（仅保留 model_page）
+  app/db.py
+    - 删除 Q3 year_range() / Q4 coverage() / Q5 diff() / Q6 gallery()
+    - 保留 diff_counts()（bracket_page 第 24 行的 KPI 仍在用）
+    - 模块 docstring「six query dimensions」改为「two query dimensions」，
+      Repository docstring 同步
+  app/tmp_test_db.py
+    - 去掉引用已删方法的 Q3~Q6 自测段，改为 crosscheck counts + global_search
+  删除文件
+    - app/pages/year_page.py / coverage_page.py / diff_page.py / gallery_page.py
+    - 对应 __pycache__ 下 4 个 *.pyc 一并清理
+  未受影响（勿删）
+    - app/ui.py 的 BracketCard / CardStrip 仍调用 thumbs.pixmap，thumbs.py 必须保留
+    - app/models.py / theme.py / config.py / bracket_page.py / model_page.py
+
+真实 GUI 启动验证（16:14，用户要求由 AI 启动）
+  启动方式：Start-Process .venv\Scripts\python.exe main.py（工作目录 app）
+    PID 31324 = venv 重定向启动器，真正 GUI 进程 PID 6360（父子关系）
+    窗口标题「KY 支架查询 · 康业后视镜支架适配库」，Responding=True
+  首帧处于最小化（GetWindowRect 返回 -32000,-32000），ShowWindow(SW_RESTORE)
+    还原后截图 logs/ui_running_window.png：Tab 仅「按车型查 / 按支架查」，
+    查询 AIRCROSS 正常返回 280/231/269 三张卡片与 7 条适配记录，
+    状态栏 支架 300 · 品牌 269 · 车型 1479 · 适配记录 6086 · 校验 10804。
+  离屏方块字截图已删除，只保留真实窗口截图；临时脚本 tmp_shot.ps1 已清理。
+
+14.3 验证（离屏渲染冒烟测试）
+  临时脚本 app/tmp_verify_tabs.py（验证后已删除），QT_QPA_PLATFORM=offscreen：
+    tabs: ['按车型查', '按支架查']          ← 只剩 2 个
+    db methods: bracket_ids / bracket_models / brackets / brands / close /
+                diff_counts / global_search / model_brackets / models / stats
+    主窗口构建无异常，工具栏 / 筛选行 / 表格 / 状态栏均正常渲染
+    截图 logs/ui_after_remove_tabs.png（离屏环境缺中文字体，文字显示为方块，
+    属渲染环境限制，非功能问题；实际启动中文正常）
+  read_lints：main.py / db.py / tmp_test_db.py 均 0 诊断。
+
+14.4 风险与回滚
+  - 本项目不是 git 仓库（无 .git），被删的 4 个页面文件不可通过版本控制恢复；
+    如需重建只能按 14.2 的功能描述重写（year/coverage/diff/gallery 四个查询页）。
+  - db.py 的 year_range / coverage 删除后，「导出 Excel」若需要按年段或按品牌
+    统计，需重新实现（对应 13.6 待办）。
+  - 其余功能（按车型查、按支架查、全局搜索、状态栏统计）行为不变。
+
+14.5 数据终态核验（补记，第 6~8 次重建过程日志缺失）
+  第 6~8 次重建的逐步记录在此前会话中未落盘，仅补记可复核的库终态：
+    fitments   6086（A 4112 / B 1974），years_raw > 40 字符 638 条
+    crosscheck 10804（MATCH 5304 / ONLY_A 5459 / ONLY_B 41 / CONFLICT 0）
+    年份范围   1990 ~ 2027，全年款（year_from IS NULL）816 行
+    年份核验   与 normalize_years() 重算值不一致 0 条，越界（<1980/>2035）0 条
+    报告       scraper/data/report/verify_years.txt
+  说明：早期报告的「28 条年份差异」经复核为核验脚本过时（旧 STRICT 正则不认
+        「2013到2020」这类无「款」区间）造成的假差异，库内数据本身正确。

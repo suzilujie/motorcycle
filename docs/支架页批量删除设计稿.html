@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>按支架查页：行首勾选 + 批量删除 设计稿 v1.0</title>
+<style>
+:root{
+  --bg:#0f172a; --panel:#1e293b; --panel2:#334155; --line:#334155; --edge:#475569;
+  --text:#e2e8f0; --dim:#94a3b8; --faint:#64748b; --strong:#f1f5f9;
+  --blue:#60a5fa; --green:#4ade80; --orange:#fb923c; --red:#f87171; --purple:#c4b5fd; --cyan:#67e8f9;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Microsoft YaHei UI","Segoe UI",system-ui,sans-serif;
+  font-size:16px;line-height:1.75}
+.wrap{max-width:1100px;margin:0 auto;padding:48px 32px 120px}
+h1{font-size:26px;font-weight:600;color:var(--strong);margin:0 0 8px;
+  padding-bottom:14px;border-bottom:2px solid var(--panel2)}
+h2{font-size:20px;font-weight:600;color:var(--strong);margin:44px 0 14px;
+  padding-left:12px;border-left:4px solid var(--blue);border-bottom:1px solid var(--line);
+  padding-bottom:8px}
+h3{font-size:16px;font-weight:600;color:var(--strong);margin:26px 0 10px;
+  padding-left:10px;border-left:3px solid var(--edge)}
+p{margin:10px 0}
+b,strong{color:var(--strong)}
+code{font-family:Consolas,monospace;font-size:13px;background:#0b1220;
+  border:1px solid var(--line);border-radius:3px;padding:1px 5px;color:var(--cyan)}
+pre{background:#0b1220;border:1px solid var(--line);border-left:3px solid var(--edge);
+  border-radius:4px;padding:14px 16px;overflow-x:auto;font-family:Consolas,monospace;
+  font-size:13px;line-height:1.65;color:#cbd5e1}
+.meta{color:var(--faint);font-size:13px;margin-bottom:26px}
+.card{background:var(--panel);border-left:3px solid var(--blue);border-radius:4px;
+  padding:12px 16px;margin:16px 0;font-size:15px}
+blockquote{margin:16px 0;padding:12px 16px;background:var(--panel);
+  border-left:3px solid var(--orange);border-radius:4px;color:var(--dim);font-size:15px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th{background:var(--panel2);color:var(--strong);font-weight:600;text-align:left;
+  padding:9px 12px;border:1px solid var(--edge);font-size:13px}
+td{padding:9px 12px;border:1px solid var(--line);vertical-align:top;color:var(--dim)}
+td b{color:var(--strong)}
+ul,ol{margin:10px 0;padding-left:24px;color:var(--dim)}
+li{margin:5px 0}
+li b{color:var(--strong)}
+.toc{position:fixed;top:64px;right:24px;width:210px;max-height:76vh;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:4px;
+  padding:12px 10px;font-size:13px;z-index:20}
+.toc h5{margin:0 0 8px;font-size:12px;color:var(--faint);font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase}
+.toc a{display:block;color:var(--dim);text-decoration:none;padding:4px 8px;
+  border-left:2px solid transparent;border-radius:2px;line-height:1.5}
+.toc a:hover{color:var(--strong);background:var(--panel2)}
+.toc a.sub{padding-left:20px;font-size:12px;color:var(--faint)}
+@media (max-width:1500px){.toc{display:none}}
+.cap{color:var(--faint);font-size:13px;margin:0 0 22px;padding-left:2px}
+.cap b{color:var(--dim);font-weight:400}
+.badge{display:inline-block;font-size:11px;border:1px solid var(--edge);border-radius:9px;
+  padding:0 8px;color:var(--dim);margin-left:6px;vertical-align:middle}
+
+/* ---------- app mockup（应用自身配色：深色主题） ---------- */
+.app{--a-bg:#2c2c2c;--a-panel:#363636;--a-card:#3a3a3a;--a-input:#262626;--a-alt:#434343;
+  --a-head:#484848;--a-line:#4c4c4c;--a-strong:#f2f2f2;--a-dim:#b4b4b4;--a-faint:#868686;
+  --a-accent:#6cc9ff;--a-accentbg:#1a86d9;--a-sel:#3c4a55;--a-plate:#ececec;
+  --a-chip:#3f3f3f;--a-chip-line:#555;--a-bad:#f1707b;
+  background:var(--a-bg);color:var(--a-strong);border:1px solid #0a0f1c;border-radius:6px;
+  overflow:hidden;font-size:13px;line-height:1.5;margin:16px 0 6px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.06)}
+.app .titlebar{background:var(--a-panel);border-bottom:1px solid var(--a-line);
+  padding:7px 12px;display:flex;align-items:center;gap:10px;font-size:12px}
+.app .titlebar .nm{font-weight:600;font-size:13px}
+.app .titlebar .sub{color:var(--a-faint);font-size:11px}
+.app .titlebar .right{margin-left:auto;display:flex;gap:6px}
+.app .seg{border:1px solid var(--a-line);background:var(--a-card);color:var(--a-dim);
+  padding:2px 10px;font-size:11px}
+.app .filterbar{display:flex;align-items:center;gap:8px;padding:9px 12px;
+  border-bottom:1px solid var(--a-line);font-size:11px;color:var(--a-dim)}
+.app .inp{background:var(--a-input);border:1px solid var(--a-line);border-radius:4px;
+  padding:3px 8px;color:var(--a-strong);font-size:12px;min-width:60px}
+.app .btn{background:var(--a-card);border:1px solid var(--a-line);border-radius:4px;
+  padding:4px 10px;font-size:12px;color:var(--a-strong);white-space:nowrap;display:inline-block}
+.app .btn.primary{background:var(--a-accentbg);border-color:var(--a-accentbg);color:#fff;font-weight:600}
+.app .btn.ghost{border-color:var(--a-accent);color:var(--a-accent);background:transparent}
+.app .btn.danger{border-color:var(--a-bad);color:var(--a-bad);background:transparent}
+.app .btn.danger-off{border-color:var(--a-line);color:var(--a-faint);background:transparent}
+.app .split{display:flex;min-height:330px}
+.app .left{width:300px;flex:0 0 300px;padding:14px 16px;border-right:1px solid var(--a-line)}
+.app .right{flex:1;padding:0;min-width:0}
+.app .plate{width:268px;height:190px;background:var(--a-plate);border:1px solid var(--a-line);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;
+  color:#9a9a9a;font-size:11px}
+.app .num{font-family:Consolas,monospace;font-size:20px;font-weight:700;margin-top:8px}
+.app .note{font-size:11px;color:var(--a-faint);margin-top:6px;line-height:1.55}
+.app .row{display:flex;gap:6px;margin-top:8px}
+.app .chip{display:inline-block;background:var(--a-chip);border:1px solid var(--a-chip-line);
+  border-radius:9px;padding:0 7px;font-size:11px;color:var(--a-dim);
+  font-family:Consolas,monospace;line-height:16px}
+/* 表格上方工具条 */
+.app .toolbar{display:flex;align-items:center;gap:10px;padding:6px 12px;
+  border-bottom:1px solid var(--a-line);background:var(--a-panel);font-size:11px;
+  color:var(--a-faint)}
+.app .toolbar .count{margin-left:auto}
+.app .cbx{display:inline-flex;align-items:center;gap:6px;color:var(--a-dim)}
+.app .box{width:13px;height:13px;border:1px solid var(--a-line);border-radius:3px;
+  background:var(--a-input);display:inline-block;position:relative}
+.app .box.on{background:var(--a-accentbg);border-color:var(--a-accentbg)}
+.app .box.half{background:linear-gradient(90deg,var(--a-accentbg) 50%,var(--a-input) 50%);
+  border-color:var(--a-accentbg)}
+.app table.t{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.app table.t th{background:var(--a-head);color:var(--a-faint);font-weight:400;
+  text-align:left;padding:0 8px;height:30px;border-bottom:1px solid var(--a-line);font-size:11px}
+.app table.t td{padding:0 8px;height:30px;border-bottom:1px solid var(--a-line);
+  color:var(--a-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app table.t tr:nth-child(even) td{background:var(--a-alt)}
+.app table.t tr.picked td{background:var(--a-sel)}
+.app table.t td.ck{text-align:center}
+.app .lnk{color:var(--a-accent);font-size:11px}
+.app .lnk.bad{color:var(--a-bad)}
+.dlg{background:var(--a-bg);border:1px solid var(--a-line);border-radius:6px;
+  box-shadow:0 18px 40px rgba(0,0,0,.45);width:460px;margin:0 auto;padding:16px 20px 14px}
+.dlg h6{margin:0 0 2px;font-size:14px;font-weight:600;color:var(--a-strong)}
+.dlg .sub{font-size:11px;color:var(--a-faint);margin-bottom:10px}
+.dlg .body{font-size:12px;color:var(--a-dim);line-height:1.7}
+.dlg .body b{color:var(--a-strong);font-weight:400}
+.dlg .warn{font-size:11px;color:var(--a-faint);margin-top:8px;
+  border-left:2px solid var(--a-bad);padding-left:8px}
+.dlg .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;
+  padding-top:12px;border-top:1px solid var(--a-line)}
+.app .shadowed{background:rgba(0,0,0,.35);padding:18px 0}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:1100px){.cols{grid-template-columns:1fr}}
+
+@media print{
+  :root{--bg:#fff;--panel:#f7f7f7;--panel2:#e8e8e8;--line:#c8c8c8;--edge:#9a9a9a;
+        --text:#1a1a1a;--dim:#333;--faint:#555;--strong:#000;color-scheme:light}
+  body{background:#fff;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .toc{display:none}
+  .wrap{max-width:none;padding:0}
+  pre{background:#f5f5f5;color:#1a1a1a}
+  code{background:#f0f0f0;color:#0b4a6f}
+}
+</style>
+</head>
+<body>
+<nav class="toc">
+  <h5>目录</h5>
+  <a href="#s1">1 需求</a>
+  <a href="#s2">2 改后布局</a>
+  <a href="#s2-1" class="sub">2.1 工具条</a>
+  <a href="#s2-2" class="sub">2.2 勾选列</a>
+  <a href="#s3">3 交互状态</a>
+  <a href="#s4">4 删除确认</a>
+  <a href="#s5">5 规范</a>
+  <a href="#s6">6 数据与接口</a>
+  <a href="#s7">7 对照与备选</a>
+  <a href="#s8">8 未落地声明</a>
+</nav>
+
+<div class="wrap">
+<h1>按支架查页：行首勾选 + 批量删除 <span class="badge">v1.0</span></h1>
+<div class="meta">2026-10-28 · 副作用范围：该页表格（按车型查页不动）· 状态：待确认，未写代码</div>
+
+<h2 id="s1">1 需求</h2>
+<p>用户原话：<b>「把这个删除按钮放在列表的上方，给列表每一行加个 checkbox，这样可以多选，做批量删除」</b>。</p>
+<table>
+  <tr><th style="width:170px">项目</th><th style="width:110px">结论</th><th>说明</th></tr>
+  <tr><td>行内「删除」</td><td><b>移除</b></td><td>操作列只留「编辑」，96px → 60px</td></tr>
+  <tr><td>删除入口</td><td><b>上移到工具条</b></td><td>表格上方新增 32px 工具条：「全选」勾选框 + 「删除选中（N）」按钮 + 右侧计数</td></tr>
+  <tr><td>行首 checkbox</td><td><b>新增一列</b></td><td>宽 36px，36×36 可点区域；点勾选<b>不改变行高亮</b>（两者互不干扰）</td></tr>
+  <tr><td>批量删除</td><td><b>一次事务</b></td><td>只备份一次、单事务删完；部分 id 已不存在时按实际删除数回报</td></tr>
+  <tr><td>行内「编辑」</td><td><b>保留</b></td><td>改品牌/车型/年款仍用弹窗（重命名操作，不适合批量）</td></tr>
+</table>
+
+<h2 id="s2">2 改后布局</h2>
+
+<h3 id="s2-1">2.1 现状 → 改后</h3>
+<p><b>现状</b>：操作列里「编辑 | 删除」并排，删除只能一条一条点。</p>
+<div class="app">
+  <div class="titlebar"><span class="nm">后视镜支架查询</span><span class="sub">车型 / 支架 双向反查</span>
+    <span class="right"><span class="seg">品牌</span><span class="seg">型号</span><span class="seg">新增</span><span class="btn">深色</span></span></div>
+  <div class="filterbar">支架号 <span class="inp">9</span> 品牌 <span class="inp">全部品牌</span>
+    <span style="margin-left:auto">反查有少量缺口（4 条 / 0.38%），以「按车型查」为准</span></div>
+  <div class="split">
+    <div class="left">
+      <div class="plate">封面</div>
+      <div class="num">9 号</div>
+      <div class="note">适配车型 14 条 · 覆盖品牌 7 个</div>
+      <div class="row"><span class="btn primary">复制支架号</span><span class="btn ghost">编辑支架</span></div>
+      <div class="row"><span class="btn">＋ 添加车型</span><span class="btn">在按车型查中查看</span></div>
+    </div>
+    <div class="right">
+      <table class="t">
+        <colgroup><col style="width:16%"><col style="width:20%"><col style="width:13%"><col><col style="width:9%"><col style="width:100px"></colgroup>
+        <tr><th>品牌</th><th>车型</th><th>年款区间</th><th>年款原文</th><th>来源</th><th>操作</th></tr>
+        <tr><td>一汽</td><td>佳宝V52</td><td><span class="chip">2011</span></td><td>2011款1.0L舒适型DA465QA</td><td>● A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>五菱</td><td>荣光S</td><td><span class="chip">2021 – 2023</span></td><td>2021款 2022款 2023款</td><td>● A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+        <tr><td>北汽幻速</td><td>H6</td><td><span class="chip">2016</span></td><td>2016款</td><td>● A</td><td><span class="lnk">编辑</span> <span class="lnk bad">删除</span></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>现状：</b>删除按行点，连删 10 条要点 10 次、确认 10 次、备份 10 次。</p>
+
+<p><b>改后</b>：表格上方一条工具条，行首一列勾选框，操作列只剩「编辑」。</p>
+<div class="app">
+  <div class="titlebar"><span class="nm">后视镜支架查询</span><span class="sub">车型 / 支架 双向反查</span>
+    <span class="right"><span class="seg">品牌</span><span class="seg">型号</span><span class="seg">新增</span><span class="btn">深色</span></span></div>
+  <div class="filterbar">支架号 <span class="inp">9</span> 品牌 <span class="inp">全部品牌</span>
+    <span style="margin-left:auto">反查有少量缺口（4 条 / 0.38%），以「按车型查」为准</span></div>
+  <div class="split">
+    <div class="left">
+      <div class="plate">封面</div>
+      <div class="num">9 号</div>
+      <div class="note">适配车型 14 条 · 覆盖品牌 7 个</div>
+      <div class="row"><span class="btn primary">复制支架号</span><span class="btn ghost">编辑支架</span></div>
+      <div class="row"><span class="btn">＋ 添加车型</span><span class="btn">在按车型查中查看</span></div>
+    </div>
+    <div class="right">
+      <div class="toolbar">
+        <span class="cbx"><span class="box"></span>全选</span>
+        <span class="btn danger-off">删除选中（0）</span>
+        <span class="count">共 14 条 · 已选 0</span>
+      </div>
+      <table class="t">
+        <colgroup><col style="width:36px"><col style="width:15%"><col style="width:20%"><col style="width:13%"><col><col style="width:9%"><col style="width:60px"></colgroup>
+        <tr><th style="text-align:center">☐</th><th>品牌</th><th>车型</th><th>年款区间</th><th>年款原文</th><th>来源</th><th>操作</th></tr>
+        <tr><td class="ck"><span class="box"></span></td><td>一汽</td><td>佳宝V52</td><td><span class="chip">2011</span></td><td>2011款1.0L舒适型DA465QA</td><td>● A</td><td><span class="lnk">编辑</span></td></tr>
+        <tr><td class="ck"><span class="box"></span></td><td>五菱</td><td>荣光S</td><td><span class="chip">2021 – 2023</span></td><td>2021款 2022款 2023款</td><td>● A</td><td><span class="lnk">编辑</span></td></tr>
+        <tr><td class="ck"><span class="box"></span></td><td>北汽幻速</td><td>H6</td><td><span class="chip">2016</span></td><td>2016款</td><td>● A</td><td><span class="lnk">编辑</span></td></tr>
+        <tr><td class="ck"><span class="box"></span></td><td>北汽威旺</td><td>北汽威旺</td><td><span class="chip">2019 – 2020</span></td><td>2019款 2020款</td><td>● A</td><td><span class="lnk">编辑</span></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>改后（无勾选）：</b>「删除选中（0）」为禁用态（灰边灰字），不弹确认、不可点。</p>
+
+<h3 id="s2-2">2.2 勾选列的行为</h3>
+<table>
+  <tr><th style="width:190px">操作</th><th>结果</th></tr>
+  <tr><td>点行首方框</td><td>勾选/取消<b>该行</b>；行高亮（selection）不变，仍可用「编辑」</td></tr>
+  <tr><td>点行内其它位置</td><td>只改变高亮，<b>不改变勾选</b></td></tr>
+  <tr><td>点「全选」</td><td>勾选<b>当前查询结果的全部行</b>（受品牌筛选影响，不是全库）</td></tr>
+  <tr><td>已全部勾选时点「全选」</td><td>取消全部（变为半选/空选）</td></tr>
+  <tr><td>切换支架号 / 改品牌筛选 / 重新查询</td><td>勾选<b>清空</b>（避免删到看不见的行）</td></tr>
+  <tr><td>删除成功后</td><td>勾选清空、列表重查、计数归零</td></tr>
+</table>
+
+<h2 id="s3">3 交互状态（三态）</h2>
+<div class="cols">
+  <div>
+    <div class="app">
+      <div class="toolbar">
+        <span class="cbx"><span class="box"></span>全选</span>
+        <span class="btn danger-off">删除选中（0）</span>
+        <span class="count">共 14 条 · 已选 0</span>
+      </div>
+      <table class="t">
+        <colgroup><col style="width:36px"><col style="width:22%"><col></colgroup>
+        <tr><th style="text-align:center">☐</th><th>品牌</th><th>车型</th></tr>
+        <tr><td class="ck"><span class="box"></span></td><td>一汽</td><td>佳宝V52</td></tr>
+        <tr><td class="ck"><span class="box"></span></td><td>五菱</td><td>荣光S</td></tr>
+      </table>
+    </div>
+    <p class="cap"><b>空选：</b>按钮禁用；不会误触批量删除。</p>
+  </div>
+  <div>
+    <div class="app">
+      <div class="toolbar">
+        <span class="cbx"><span class="box half"></span>全选</span>
+        <span class="btn danger">删除选中（3）</span>
+        <span class="count">共 14 条 · 已选 3</span>
+      </div>
+      <table class="t">
+        <colgroup><col style="width:36px"><col style="width:22%"><col></colgroup>
+        <tr><th style="text-align:center">☐</th><th>品牌</th><th>车型</th></tr>
+        <tr class="picked"><td class="ck"><span class="box on"></span></td><td>一汽</td><td>佳宝V52</td></tr>
+        <tr class="picked"><td class="ck"><span class="box on"></span></td><td>五菱</td><td>荣光S</td></tr>
+        <tr class="picked"><td class="ck"><span class="box on"></span></td><td>北汽幻速</td><td>H6</td></tr>
+        <tr><td class="ck"><span class="box"></span></td><td>北汽威旺</td><td>北汽威旺</td></tr>
+      </table>
+    </div>
+    <p class="cap"><b>部分选中：</b>「全选」显示半选；按钮转为危险色并带数量。</p>
+  </div>
+</div>
+
+<div class="app">
+  <div class="toolbar">
+    <span class="cbx"><span class="box on"></span>全选</span>
+    <span class="btn danger">删除选中（14）</span>
+    <span class="count">共 14 条 · 已选 14</span>
+  </div>
+  <table class="t">
+    <colgroup><col style="width:36px"><col style="width:16%"><col style="width:22%"><col style="width:14%"><col></colgroup>
+    <tr><th style="text-align:center">☑</th><th>品牌</th><th>车型</th><th>年款区间</th><th>年款原文</th></tr>
+    <tr class="picked"><td class="ck"><span class="box on"></span></td><td>一汽</td><td>佳宝V52</td><td><span class="chip">2011</span></td><td>2011款1.0L舒适型DA465QA</td></tr>
+    <tr class="picked"><td class="ck"><span class="box on"></span></td><td>五菱</td><td>荣光S</td><td><span class="chip">2021 – 2023</span></td><td>2021款 2022款 2023款</td></tr>
+    <tr class="picked"><td class="ck"><span class="box on"></span></td><td>北汽幻速</td><td>H6</td><td><span class="chip">2016</span></td><td>2016款</td></tr>
+  </table>
+</div>
+<p class="cap"><b>全选：</b>勾选框实心；工具条计数与按钮数量一致，便于确认「没多选」。</p>
+
+<h2 id="s4">4 删除确认弹窗</h2>
+<div class="app shadowed">
+  <div class="dlg">
+    <h6>删除 3 条适配记录？</h6>
+    <div class="sub">支架号 9 · 涉及 3 个品牌</div>
+    <div class="body">
+      一汽 佳宝V52 · 2011<br>
+      五菱 荣光S · 2021 – 2023<br>
+      北汽幻速 H6 · 2016
+    </div>
+    <div class="warn">
+      其中 3 条来自爬虫（A 路），下次增量抓取<b>可能重新写入</b>。<br>
+      删除前会自动备份数据库（data/backup/），删错了可用快照恢复。
+    </div>
+    <div class="actions"><span class="btn">取消</span><span class="btn danger">删除 3 条</span></div>
+  </div>
+</div>
+<p class="cap"><b>说明：</b>超过 8 条时只列前 8 条 + 「……另 6 条」；确认按钮文案带数量，防手滑。</p>
+
+<h2 id="s5">5 规范</h2>
+<table>
+  <tr><th style="width:170px">项目</th><th style="width:150px">值</th><th>约束</th></tr>
+  <tr><td>工具条高度</td><td>32 px</td><td>底边 1px 分隔线；与表格之间无额外间距</td></tr>
+  <tr><td>工具条元素</td><td>全选 · 删除选中（N）· 计数</td><td>计数右对齐，文案「共 N 条 · 已选 M」</td></tr>
+  <tr><td>勾选列宽</td><td>36 px</td><td>固定在首列；表头显示 ☐，可点=全选</td></tr>
+  <tr><td>勾选框</td><td>13 × 13，圆角 3</td><td>未选：透明底 + 边线；已选：强调色实心；半选：半填充</td></tr>
+  <tr><td>行高</td><td>38 px（不变）</td><td>勾选框垂直居中，不撑高行</td></tr>
+  <tr><td>操作列</td><td>96 → 60 px</td><td>只剩「编辑」，表格让出 36px 给勾选列</td></tr>
+  <tr><td>按钮态</td><td>danger / danger-off</td><td>0 条=禁用灰；≥1 条=红边红字；文案带数量</td></tr>
+  <tr><td>刷新策略</td><td>查询变化即清空勾选</td><td>不做「跨查询保留选择」，避免删到看不见的行</td></tr>
+</table>
+
+<h2 id="s6">6 数据与接口</h2>
+<pre>app/db.py  新增 Repository.delete_fitments(row_ids) -> dict
+    备份一次（backup_database）
+    单事务：DELETE FROM fitments WHERE id IN (?…)
+    返回 {"deleted": n, "missing": m, "backup": path}
+      missing = 请求里已经不存在（被别处删掉）的条数，不算失败
+    被爬虫锁库时沿用 _write_error -> "数据库正被别的程序占用…"
+    旧的 delete_fitment(id) 保留（行内删除已移除，但测试脚本还在用）
+
+app/models.py  DictTableModel 增加勾选列支持（通用，不只这一页）
+    列键 "__check__" = 勾选列
+    data(CheckStateRole) / setData(CheckStateRole) / flags(ItemIsUserCheckable)
+    checked_ids() / checked_count() / check_all(list_of_ids) / clear_checked()
+    set_rows() 时自动丢弃已不存在的 id（换支架号不会残留选择）
+
+app/pages/bracket_page.py
+    COLUMNS 首列插 ("__check__", "", 36)，操作列 96 -> 60
+    chips 2 -> 3，dots 4 -> 5（列索引整体右移一位）
+    表格上方插工具条（全选 QCheckBox + 删除选中 QPushButton#danger + 计数 QLabel）
+    run_query() 末尾清空勾选并刷新计数
+    Delete 键：有勾选 -> 删勾选；无勾选 -> 删当前行（保留旧习惯）
+    LinkDelegate 由 ("编辑","删除") 改为 ("编辑",)
+
+app/theme.py   补 QCheckBox / QTableView::indicator 的方框样式（当前 QSS 没有，
+    深色主题下默认指示器几乎看不见）</pre>
+<div class="card">
+  <b>为什么批量删除要新写方法：</b>现在 <code>delete_fitment()</code> 每条都
+  <code>backup_database()</code> 一次并单独开事务。删 14 条 = 14 份快照（
+  <code>data/backup/</code> 只留 10 份，会把更早的备份挤掉），且中途失败只删了一半。
+  批量版只备份一次、一个事务全成或全不成。
+</div>
+
+<h2 id="s7">7 对照与备选</h2>
+<table>
+  <tr><th style="width:170px">能力</th><th style="width:220px">现状</th><th>改后</th></tr>
+  <tr><td>删除入口</td><td>每行操作列「删除」</td><td><b>工具条「删除选中（N）」</b></td></tr>
+  <tr><td>多选</td><td>无（单选行高亮）</td><td><b>行首 checkbox + 全选</b></td></tr>
+  <tr><td>连删 14 条</td><td>14 次点击 + 14 次确认 + 14 份快照</td><td><b>2 次点击 + 1 次确认 + 1 份快照</b></td></tr>
+  <tr><td>行内编辑</td><td>「编辑 / 删除」</td><td>只剩「编辑」（不变）</td></tr>
+  <tr><td>按车型查页</td><td>独立表格，同样「编辑 / 删除」</td><td><b>本次不动</b>（可作为下一步统一）</td></tr>
+</table>
+<h3>未采用 / 待你拍板</h3>
+<ul>
+  <li><b>表格表头自带勾选框（点表头全选）：</b>Qt 支持，但点击热区小、样式难控，
+    不如工具条「全选」稳（未采用）。</li>
+  <li><b>整列去掉操作、改双击行编辑：</b>双击与勾选框点击容易误触（未采用）。</li>
+  <li><b>Delete 键删勾选、无勾选时删当前行：</b>保留旧习惯，但威力变大 ——
+    若你希望「Delete 键只删勾选、绝不删当前行」，告诉我改成后者。</li>
+  <li><b>跨查询保留勾选：</b>可能导致「删掉当前看不见的行」，不做。</li>
+</ul>
+
+<h2 id="s8">8 未落地声明</h2>
+<blockquote>
+本文件是<b>设计稿（mockup）</b>，不连真实数据，也<b>没有改任何代码</b>：
+行首 checkbox、工具条、批量删除接口都还没有。确认后按第 6 节实施，
+实施前会再给一次改动清单与影响范围。
+</blockquote>
+
+</div>
+</body>
+</html>

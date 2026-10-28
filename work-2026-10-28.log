@@ -1,0 +1,1016 @@
+2026-10-28 工作日志 —— 品牌页搜索改为「一切按首字母分组」+ 多音字修正
+
+================================================================================
+一、需求（Requirement）
+================================================================================
+用户反馈：品牌页搜索字母时，结果里混进了其它字母的品牌。
+
+复现（改动前实测，.venv\Scripts\python.exe）：
+  ch -> 84 个品牌, 跨首字母 ABCDFGHJKLMNOPQRSTWXYZ
+  zh -> 32 个品牌, 跨首字母 BDGHNSWZ
+  an -> 98 个品牌, 跨首字母 ABCDFGHJKLMNOPQRSTWXYZ
+
+根因（root cause）：
+  1) app/pages/brand_page.py::_rerender 有两条语义不同的路径：
+     单字母 -> group_key() 命中 -> 只留该分组（正确）
+     多字符 -> search.filter_items() 拼音全拼/首字母串「任意位置子串」匹配
+               -> 北京汽车 bei**ch**e、东风创普 之类被捞出，跨一堆字母
+  2) pypinyin 把多音字「长」默认读 zhǎng（zhang），导致 长城/长安/长安凯程/
+     长安启源/长安欧尚/长安跨越/长征汽车 共 7 个品牌落在 Z 组，输入 C 找不到。
+
+用户拍板（2026-10-28）：
+  ① 品牌页不需要用拼音搜；
+  ② 多字符输入也按单字母处理（只看第一个字符决定分组）。
+
+================================================================================
+二、改动（Changes）
+================================================================================
+app/pages/brand_page.py
+  1) group_key(text)
+       原：len(text) != 1 -> None（多字符走拼音子串）
+       新：只取 text[:1] 判定；A-Z（大小写）/ # -> 该分组键；其余 -> None
+     文档串说明「输入 ch 与 c 同义，都是看 C 组」。
+  2) _rerender()
+       字母键非空 -> rows 只保留 initial_of(brand) == 该字母（不变）
+       否则（中文/数字输入）-> 改为品牌名原文包含匹配（needle in brand.lower()），
+       删除 search.filter_items() 调用，品牌页彻底不展开拼音。
+  3) placeholder
+       "单字母看分组（A-Z / #），多字符搜品牌"
+         -> "字母看分组（A-Z / #），中文搜品牌"（320px 内不截断）
+
+app/search.py
+  新增 _POLYPHONE = {"长": "chang"}，_char_pinyin() 先查覆盖表再走 pypinyin。
+  该模块被品牌页首字母、车型页/支架页拼音搜索、顶栏全局搜索共用，故：
+    长城 -> ('changcheng','cc')，长安 -> ('changan','ca')
+
+app/tmp_check_pickers.py（自检脚本）
+  过滤用例 ("ben","b","c","C","#","ao","zzz")
+    -> ("ben","b","c","C","ch","zh","#","长安","长城","zzz")
+
+未改：车型页 / 支架页 / 顶栏全局搜索的拼音匹配语义（继续支持全拼与首字母）。
+
+================================================================================
+三、验证（Verification，QT_QPA_PLATFORM=offscreen）
+================================================================================
+tmp_check_pickers.py 实跑（节选）
+  filter ben   : cards=21  groups=B  B 组 · 21 个品牌
+  filter b     : cards=21  groups=B  B 组 · 21 个品牌
+  filter c     : cards=10  groups=C  C 组 · 10 个品牌      ← 原为 3（缺 7 个「长」开头）
+  filter C     : cards=10  groups=C  C 组 · 10 个品牌
+  filter ch    : cards=10  groups=C  C 组 · 10 个品牌      ← 原跨 21 个字母
+  filter zh    : cards=11  groups=Z  Z 组 · 11 个品牌      ← 原 18（含 7 个「长」开头）
+  filter #     : cards=10  groups=#  # 组 · 10 个品牌
+  filter 长安  : cards=5   groups=C  命中 5 个品牌
+  filter 长城  : cards=1   groups=C  命中 1 个品牌
+  filter zzz   : cards=11  groups=Z  Z 组 · 11 个品牌（多字符只看首字母，符合需求）
+  其余（269 张卡 / 点击信号 / 支架页 300 张 / 端到端跳转 / 主题切换）全部 OK
+
+全局搜索回归（search.filter_items 未改逻辑）
+  changcheng -> ['长城']      ← 改动前搜不到
+  cc         -> ['长城','曹操汽车']
+  zhangcheng -> []            ← 旧拼法不再命中（多音字覆盖的副作用，可接受）
+
+lint：brand_page.py / search.py 均 0 诊断。
+
+================================================================================
+四、影响范围与风险（Impact / Risk）
+================================================================================
+影响：
+  - 品牌页：字母键 = 首字母分组；多字符只看首字符；中文仍可按名称子串搜。
+  - 全站拼音键：「长」字读音由 zhang 改为 chang（含车型页、支架页、全局搜索）。
+
+风险 / 已知取舍：
+  1) 纯拉丁名品牌（JEEP / ARCFOX极狐 / SMART / DS 等 10 个）在 # 组，
+     输入 "jeep" 会按首字母跳到 J 组而不是命中 JEEP —— 需输入 # 或点 # 组。
+  2) 品牌页不再支持拼音模糊（chan / cca 之类），只支持中文原文。
+  3) _POLYPHONE 为人工维护表，后续若出现「重庆xx」等新多音字需补一行。
+
+回滚：两处改动互相独立，均可单独还原（brand_page.py 两处 + search.py 一处）。
+
+================================================================================
+五、追加需求 —— 启动默认显示品牌页（方案 A）
+================================================================================
+需求（2026-10-28）：打开应用直接显示品牌页。
+
+现状：main.py::_build_pages 末尾 nav_buttons[0].setChecked(True) 写死第一个标签；
+      启动流程（main.py:265 起）只持久化主题 ui/theme，没有记忆视图。
+
+方案对比：
+  A（采用）只改默认选中项，导航栏顺序不动，共 2 行；
+  B 顺便把「品牌」提到导航第一位 —— 会连带改动 Ctrl+1~5 语义、
+    open_brand_models/open_bracket_page 的 set_view(0/1) 与自检脚本断言，风险更大。
+用户 2026-10-28 选定方案 A。
+
+app/main.py
+  1) VIEW_LABELS 下方新增
+       DEFAULT_VIEW = "品牌"      # 按标签定位，不写死索引
+  2) _build_pages 末尾
+       self.nav_buttons[0].setChecked(True)
+         -> self.set_view(VIEW_LABELS.index(DEFAULT_VIEW))
+
+验证（QT_QPA_PLATFORM=offscreen，新建 MainWindow）
+  stack index   : 2
+  page class    : BrandPickerPage
+  checked button: 品牌
+  brand cards   : 269
+  回归 tmp_check_pickers.py：端到端跳转（bracket view 1 / brand view 0）、
+  主题切换、卡片数全部与改动前一致，OK。
+
+影响：仅启动时的默认视图；导航栏顺序、Ctrl+1~5、各页跳转逻辑均未变。
+风险：若将来 VIEW_LABELS 改名而 DEFAULT_VIEW 未同步，index() 会抛 ValueError
+      （启动即崩，属显性失败，不至于静默错位）。
+
+================================================================================
+六、新增页「新增支架」年款行去重（方案 A）
+================================================================================
+需求（2026-10-28）：年款行的输入框占位符「留空 = 全部年款（推荐）」与右侧 chip
+「全部年款」表达同一件事，问能否去掉。
+
+三方案对比：
+  A（采用）删占位符、保留 chip —— chip 会实时反映解析结果，是必要反馈；
+  B 占位符缩成「留空即全部年款」，chip 保留 —— 仍重复；
+  C 删 chip、留占位符 —— 不可取：输入 2019-2023 后看不到解析结果，
+    非法格式也少一处提示（_sync_year 会把 chip 变成「格式错误」）。
+
+app/pages/entry_forms.py
+  _build_year_row()：删除 self.years_edit.setPlaceholderText("留空 = 全部年款（推荐）")，
+  改为注释说明（chip 承担状态提示；占位符在窄输入框里会折行撑高行高）。
+
+docs/新增页改版设计稿.html
+  左栏线框的年款行同步去掉占位符，并标注「年款已定（2026-10-28）」。
+
+验证（QT_QPA_PLATFORM=offscreen）
+  placeholder = ''                      ← 已移除
+  年款行高 28 / chip 高 28               ← 单行，不再被折行撑高
+  chip 空态   -> 全部年款
+  chip 2019-2023 -> 2019 – 2023
+  chip 2019-  -> 2019（开区间，仍合法，保存按钮保持可用）
+  chip 清空后 -> 全部年款
+  未改：app/edit_dialog.py:60 的同类占位符（编辑弹窗，非本次范围）。
+
+影响：仅新增页年款行的视觉与提示；年款解析、合法性校验、保存流程未改。
+
+================================================================================
+七、新增页两大改造：支架多图 + 筛选合并（设计方案见 docs/新增页改版设计稿.html）
+================================================================================
+用户 2026-10-28 确认「先实施」，按设计稿推荐项落地：
+  多图上限 6 张 / 点缩略图设封面 / × 删除（保存时生效）/ 输入已有支架号自动载入
+  已有图片 / 候选按钮文案缩为「全选」「清空」（完整说明进 tooltip）。
+
+改动 1 —— 数据库：支架多图
+  scraper/store.py  SCHEMA 新增 bracket_images(bracket_id, file_name, sort_index,
+                    added_at, PK(bracket_id,file_name)) + idx_bracket_images。
+  app/db.py
+    INDEXES 里补同样的 CREATE TABLE IF NOT EXISTS / CREATE INDEX：
+      老库在 Repository() 启动时自动补表，无需手工迁移。
+    Repository.bracket_images(bracket_id) -> [{file_name, sort_index}]
+      表里没有行时回退读 brackets.image_file（爬虫 / 老数据兼容）。
+    add_manual(bracket=…) 支持 {"images": [...]}：视为「期望的完整列表」，
+      第一张写回 brackets.image_file 当封面，多余旧行删除（磁盘文件保留，
+      不做不可逆删除）；不给 images 时维持原 image_file 行为（爬虫路径不变）。
+    新增 db.Repository._save_bracket() 承担上述对账。
+
+改动 2 —— UI：多图缩略图条
+  app/pages/entry_forms.py
+    import_image(bracket_id, path, index=1)：文件名改为 bracket_<id>_<NN>.<ext>，
+      同名顺延，不再像以前那样重选一次就覆盖上一张。
+    BracketForm：MAX_IMAGES=6 / THUMB=78×58 / 一行 3 张
+      - 「＋ 添加图片」（QFileDialog.getOpenFileNames 多选）与末位「＋」格子
+      - 每张右上角 × 删除；点击缩略图设为封面（移到首位）
+      - 首张带「封面」角标；下方 150×108 预览显示封面
+      - 支架号 textChanged -> _load_images()：命中已有记录时带出它的图片
+        （存在未保存新图时不覆盖，避免丢失用户刚选的图）
+      - write() 统一导入新图并按顺序提交 images 列表，成功后就地转正
+      - reset() 清空列表与已载入标记
+
+改动 3 —— UI：两个筛选合并
+  app/ui.py  CheckList 新增可选参数 leading=None（挂在搜索框之前）；
+             按钮文案「全选筛选结果/清空已选」->「全选/清空」+ tooltip。
+  app/pages/entry_forms.py
+    EntryForm 新增钩子 _checklist_leading()（默认 None，ModelForm 不受影响）。
+    BracketForm 把品牌下拉移入候选工具条（宽 132，tooltip 说明），
+    删除左栏「筛选」行与「右侧候选只列该品牌的车型」提示。
+
+自检脚本：app/tmp_check_images.py（DB 部分只在临时目录的副本上跑）
+  - 建表 / 三图写入、封面同步、换封面+删一张、空列表清封面、老调用只给封面、
+    老库回退读封面
+  - UI：leading 是否品牌框、按钮文案、空态格数、载入已有图、换封面、删图、reset
+
+未改：反查页大图 / 按支架查卡片 / 按车型查缩略图 —— 全部继续用封面 image_file。
+
+================================================================================
+八、新增支架页布局 v2（实机观感问题修复）
+================================================================================
+用户实机截图反馈「布局是不是有问题」，复检确认 4 处：
+  1) 缩略图 78×58 × 3 列只占 246/336px，右侧空 90px；
+  2) 图数不是 3 的倍数时「＋」独占第二行第一格（孤格）；
+  3) 缩略图下方 150×108 大预览与首图重复，白占 108px；
+  4) 保存/清空被 column.addStretch(1) 顶到栏底，与表单之间空约 200px。
+
+方案对比（详见 docs/新增页改版设计稿.html 第 9 节）：
+  P1（采用）100×76 × 3 列 = 312px，6 张两行整，去大预览，＋只留行内按钮；
+  P2 78×58 × 4 列 = 330px，宽度也满但 6 张仍 4+2 断行且图更小；
+  P3 保留大预览 —— 重复显示，左栏最挤。
+用户 2026-10-28 确认 P1 三项（去大预览 / 100×76 / 按钮上移）。
+
+app/pages/entry_forms.py
+  1) BracketForm.THUMB (78,58) -> (100,76)（3 列 312px，填满 336 左栏）。
+  2) _rebuild_strip()：删除网格里的「＋」按钮，改为
+     self.photo_btn.setEnabled(len < MAX_IMAGES)（满 6 张自动置灰，提示仍有 6/6）。
+  3) 删除 self.plate（ui.photo_plate 150×108）与 _show_cover()，不再重复显示封面。
+  4) EntryForm.__init__：column.addStretch(1) 从 _build_actions 之前移到之后
+     —— 按钮紧跟字段，剩余空白留在栏底。ModelForm 同步受益（同一条布局链）。
+
+验证（QT_QPA_PLATFORM=offscreen, 1280×860）
+  缩略图 4 张 -> 网格 4 格（3 + 1），无「＋」孤格；3 列宽 312
+  save_btn 位置 y=470（原贴栏底 ~700），空白移到按钮下方
+  tmp_check_images.py 全部通过：空态格数 0、添加键可用、"plate 已移除"
+  回归 tmp_check_save.py / tmp_check_pickers.py：录入 2+1 条、Q2 反查、
+  品牌页/支架页/跳转/主题全部 OK
+
+影响：仅新增页左栏排版；图片增删/封面/保存逻辑与数据库结构未变。
+
+================================================================================
+九、新增品牌弹窗（品牌 + 多个车型，逐个输入框）
+================================================================================
+需求（2026-10-28）：在「新增支架」页的品牌下拉上直接新增品牌，弹窗内可挂多个车型。
+用户明确否决「一整块 textarea」，要求每个车型一个独立输入框（可增可删）。
+
+方案：
+  入口 E1（采用）品牌下拉最下方分隔线 + 「＋ 新增品牌…」，选中即弹窗；
+         E2 旁边「＋」按钮 —— 工具条已满，未采用。
+  车型 D1 textarea（否决） / D2 动态行（采用）。
+  允许只建品牌不填车型；只加在新增支架页（新增车型页品牌框可编辑，直接输入即可）。
+
+新增文件 app/brand_dialog.py
+  NewBrandDialog(repo, parent)
+    - 品牌 QLineEdit + chip（将新建 / 已存在，实时判断）
+    - 车型区：QScrollArea（高 150，约 4 行可见）+ 每行 QLineEdit + 「×」删除
+      + 底部「＋ 添加车型」+ 右侧「将新增 N 个车型」计数
+    - 行上限 20；删光自动补一个空行；空行/重名在 model_names() 里过滤
+    - save() 调 repo.add_brand_models()，失败把原因写在 hint（不关窗）
+    - 成功后带出 brand_name / result
+
+app/db.py
+  新增 Repository.add_brand_models(brand, models)
+    先备份 -> 单事务：brands upsert + models INSERT OR IGNORE
+    返回 {brand, brand_created, models_added, models_skipped, backup}
+    不写 fitments（这里只补字典，适配关系仍由主表单保存）
+
+app/pages/entry_forms.py
+  - 模块常量 ALL_BRANDS / NEW_BRAND_LABEL
+  - EntryForm 新增信号 dictionary_changed
+  - BracketForm：品牌下拉 = [全部品牌] + 品牌列表 + 分隔线 + 「＋ 新增品牌…」
+    _on_brand_changed()：「＋」项是动作 -> _open_new_brand()，不当作筛选值
+    _open_new_brand()：取消则复原原选择；成功则 emit dictionary_changed
+                        -> _select_brand(新品牌) -> 底部提示「已新增品牌…车型 N 个」
+    _select_brand()：切品牌并重建候选（findText 找不到时回落到「全部品牌」）
+    refresh()：重填时保留末项入口与当前选择；candidates() 排除该入口项
+
+app/pages/add_page.py
+  两个表单的 dictionary_changed 接到 _on_dictionary_changed()：
+    本页已自行刷新，这里只发 saved({"dictionary": True}) 让主窗口重载
+    model_page / bracket_page / brand_page / bracket_pick_page 的字典。
+
+自检 app/tmp_check_brand.py（写库只在临时副本上）
+  初始 1 行；车型去重（" 车型B " -> "车型B"、重复的「车型A」去掉）；计数「将新增 2 个车型」
+  保存：brand_created=True / models_added=2；fitments 数量不变
+  重复品牌再存：brand_created=False / added=1 / skipped=1
+  只建品牌：删光行后自动补 1 行，保存后品牌在、车型为空
+  空品牌名：提示「⚠ 请填写品牌名」，对话框不关闭
+  行数上限：20 行后提示「最多 20 行，剩下的请保存后再加一次」
+  下拉结构：272 项（1 全部品牌 + 269 品牌 + 1 分隔线 + 1 入口），末项 = ＋ 新增品牌…
+  选中入口项 -> 弹窗 1 次，取消后选择复原为「全部品牌」，候选 1481 条
+  回归 tmp_check_images / tmp_check_save / tmp_check_pickers 全部 OK
+
+风险 / 取舍：
+  1) 新增品牌与车型都会写一次数据库快照（沿用现有备份策略）。
+  2) 「＋ 新增品牌…」在 Qt 里是下拉的数据项，靠文本比对识别；
+     若将来品牌真叫这个名字会冲突（极不可能）。
+  3) 新增车型页未加该入口（其品牌框可编辑，输入新名即可建档）。
+
+================================================================================
+十、「＋ 新增品牌」从下拉末项改为候选工具条按钮（放到全选之后）
+================================================================================
+需求（2026-10-28）：新增品牌的入口别藏在品牌下拉里，放到「全选」后面的按钮区。
+
+app/ui.py
+  CheckList 新增可选参数 actions=()，依次追加在「全选 / 清空」之后。
+  PickedList 固定宽 250 -> 220（给工具条腾 30px）。
+
+app/pages/entry_forms.py
+  - 新增钩子 _checklist_actions()（默认 ()，ModelForm 不受影响）。
+  - BracketForm 新建 self.new_brand_btn（objectName="flat"，「＋ 新增品牌」，
+    tooltip「弹窗新建品牌，可一次挂多个车型」），由 _checklist_actions() 交给 CheckList。
+  - 删除下拉末项方案：去掉 NEW_BRAND_LABEL 常量、分隔线插入、candidates() 的排除判断、
+    _on_brand_changed 的特判，以及取消时的选择复原逻辑（按钮不再改动下拉，无需复原）。
+  - BracketForm.CHECK_NOTE 置空（「先筛品牌，再勾选」让位给搜索框）。
+  - 品牌下拉 132 -> 120。
+  - 保存成功后仍自动切到新品牌（_select_brand）。
+
+宽度实测（offscreen，新增支架页候选工具条搜索框）
+  1400 宽 -> 338px；1280 宽 -> 218px；1120（最小窗宽）-> 58px（偏挤）
+  按钮顺序：全选(52) 清空(52) ＋新增品牌(104)，横向依次递增
+
+验证 tmp_check_brand.py（改后）
+  下拉 270 项、无分隔线；按钮文案 全选/清空/＋ 新增品牌
+  点按钮 -> 弹窗调用 1 次；取消后选中仍为「全部品牌」，候选 1481 条
+  弹窗写入/去重/只建品牌/空品牌名/20 行上限等原有用例全部保持通过
+
+风险：1120 这种最小窗宽下搜索框只剩 58px，如需改善可把三个按钮折到第二行（未做）。
+
+================================================================================
+十一、新增支架页去掉「年款」行（仅该页）
+================================================================================
+需求（2026-10-28）：用户圈出新增支架页的整行「年款」（标签 + 空输入框 + 「全部年款」
+徽标）要求去掉；确认范围为「仅新增支架页，新增车型页保留」。
+
+app/pages/entry_forms.py
+  EntryForm 新增类属性 SHOW_YEARS = True；BracketForm 置 False。
+  _build_year_row()：
+    - 控件仍然创建（years_edit / years_note / _years_state 都要给保存与回执用），
+      SHOW_YEARS=False 时只是不加入布局（parent 为 None，不显示）；
+    - years_chip 置 None（该模式不再有徽标）。
+  _sync_year()：chip 为 None 时跳过 setText（避免 AttributeError）。
+  BracketForm.INTRO 改为「支架号不存在时自动创建。适配记录统一按「全部年款」写入。」
+
+自检 app/tmp_check_noyear.py（临时库副本）
+  支架页 years 进布局 False / chip None；车型页 years 进布局 True
+  保存一条（丰田 卡罗拉）后 fitments 行：
+    years_raw = ''，year_from = None，year_to = None  -> 视作全部年款
+  回执「成功 1 条」
+回归 tmp_check_save（车型页仍可写 2024–2026）/ tmp_check_images / tmp_check_brand 全绿
+
+影响：新增支架页不再能指定年款区间（按用户要求）；两个查询页对空年款的
+      既有判定（year_from IS NULL 视作全部）不受影响；新增车型页保持原样。
+
+================================================================================
+十二、新增车型页对齐「新增支架」页的＋新增品牌入口
+================================================================================
+需求（2026-10-28）：参照新增支架页的「＋ 新增品牌」，把同样入口给到新增车型页。
+
+app/pages/entry_forms.py
+  ModelForm
+    - _build_fields 里新增 self.new_brand_btn（flat，「＋ 新增品牌」，
+      tooltip「弹窗新建品牌 + 多个车型，建完自动填进品牌框」）。
+    - _checklist_actions() 返回 (new_brand_btn,)，由 ui.CheckList(actions=…)
+      追加在「全选 / 清空」之后。
+    - 新增 _open_new_brand()：复用 brand_dialog.NewBrandDialog；成功后
+      emit dictionary_changed -> brand_box.setCurrentText(新品牌) -> refresh()
+      -> 焦点移到车型输入框 -> 底部提示「已新增品牌…车型 N 个，接着填车型名即可」。
+    - CHECK_NOTE 由「上限 200 条，输入关键词可搜全库」缩为「上限 200 条」，
+      给新按钮让出宽度（占位符已经写明可搜索）。
+
+宽度实测（offscreen）
+  1400 -> 搜索 370px；1280 -> 250px；1120 -> 90px（按钮 52/52/104 不变）
+
+验证 tmp_check_brand.py（新增段落）
+  车型页按钮文案「＋ 新增品牌」、父控件就是 CheckList（确认挂在工具条里）
+  工具条顺序 全选 / 清空 / ＋新增品牌
+  假弹窗 Accepted 后：品牌框自动填入「零测品牌」、chip 同步、底部提示正确、
+  车型候选来源随品牌切换
+
+影响：新增车型页多一个可见动作按钮；品牌框仍可手输（两条路径并存，写入都走
+      add_manual 的 targets/brands 逻辑，不冲突）。
+
+================================================================================
+十三、导航栏隐藏「按车型查 / 按支架查」两个按钮
+================================================================================
+需求（2026-10-28，用户截图圈出顶部两个按钮）：把这两个导航按钮隐藏。
+
+app/main.py
+  新增 HIDDEN_VIEWS = ("按车型查", "按支架查")。
+  _build_top_bar() 建按钮时 button.setVisible(label not in HIDDEN_VIEWS)。
+  页面本身仍留在 QStackedWidget 里，索引 / VIEW_LABELS / Ctrl+1~5 / set_view 全部不变，
+  只是导航栏不出现这两个入口。
+
+导航去向（实测）
+  导航栏可见 = ['品牌', '型号', '新增']
+  点品牌卡片 -> stack=0 ModelPage（按车型查）
+  点型号 -> stack=3，高亮「型号」；点支架卡片 -> stack=1 BracketPage（按支架查）
+  从「新增」或其它可见按钮都能随时离开结果页
+
+副作用（已知）
+  进入结果页时高亮的是被隐藏的那个按钮，所以导航栏没有高亮项。
+  Ctrl+1 / Ctrl+2 仍可直接切到两个结果页，作为隐藏后的兜底入口。
+
+验证：offscreen 全流程（默认页 -> 品牌卡 -> 型号 -> 支架卡）索引与页面类均正确。
+
+================================================================================
+十四、隐藏顶栏全局搜索框
+================================================================================
+需求（2026-10-28，用户截图圈出顶栏搜索框）：也隐藏。
+
+app/main.py
+  新增 SHOW_GLOBAL_SEARCH = False。
+  _build_top_bar()：self.search.setVisible(SHOW_GLOBAL_SEARCH)（默认 False）。
+  控件、占位符、do_search()、补全 provider、Ctrl+F 快捷键全部保留，只是不显示，
+  以后要恢复把常量改成 True 即可，无需改其它代码。
+
+验证（offscreen，1280 宽）
+  全局搜索可见 = False
+  顶栏只剩 标题 + 三个导航（品牌 / 型号 / 新增）+ 主题按钮
+  品牌页自己的搜索框（「字母看分组…」）不受影响
+
+副作用：Ctrl+F 仍会 setFocus 到隐藏的搜索框（无可见效果）；如需彻底禁用可把
+        该快捷键一并移除。
+
+================================================================================
+十五、缩略图条抽成通用组件 ImageStrip（方案 A）
+================================================================================
+需求（2026-10-28）：多图缩略图逻辑原本内联在 BracketForm 内部（_pixmap_of /
+_thumb / _rebuild_strip / _move_to_cover / _remove_image 五个方法 + self._images
++ self.strip 是个裸 QGridLayout）。后续若给「支架编辑弹窗」也加多图管理，
+照抄一遍必然分叉。用户 2026-10-28 选定方案 A：抽成独立组件，录入页先接入。
+
+新增文件 app/image_strip.py（约 117 行）
+  class ImageStrip(QWidget)
+    changed = Signal()                 # 任何增删/换封面后发出，宿主自行刷新提示
+    条目格式 {"src": 已存文件名 或 待导入的本地路径, "new": bool}
+      new=True  -> QPixmap(本地路径) 直读（还没落盘）
+      new=False -> thumbs.pixmap(文件名)（走缩略图缓存）
+    构造参数 thumb=(100, 76) / columns=3 / limit=6（与 BracketForm 原参数一致）
+    接口
+      images() -> list        返回副本，防止外部改内部状态
+      count() / full()
+      set_images(list)        深拷贝 + 按 limit 截断后重建
+      add_paths(paths) -> int 追加本地文件，返回被跳过数（读不出来 / 超上限）
+      _pixmap_of / _rebuild / _thumb / _move_to_cover / _remove  内部实现
+    交互（与原内联实现完全一致）
+      点击缩略图 = 设为封面（移到第 0 位）；右下 × = 移出列表；
+      第 1 张左下叠「封面」chip；tooltip 写明「保存时生效，磁盘文件保留」
+
+改动 app/pages/entry_forms.py
+  1) import：删 QSize / QIcon / QPixmap / QGridLayout 与直接使用 thumbs 的缩略图
+     逻辑（thumbs 仍保留，import_image() 里的 thumbs.clear_cache() 还要用）；
+     新增 from image_strip import ImageStrip。
+  2) BracketForm._build_fields：
+       holder + self.strip = QGridLayout(...)
+         -> self.strip = ImageStrip(thumb=THUMB, columns=THUMB_COLUMNS,
+                                    limit=MAX_IMAGES)
+            self.strip.changed.connect(self._on_images_changed)
+     末尾 self._rebuild_strip() -> self._on_images_changed()（空态提示/按钮态）。
+  3) 删除内联的 _pixmap_of / _thumb / _rebuild_strip / _move_to_cover /
+     _remove_image 与 self._images 字段；新增 _on_images_changed()：
+       photo_btn.setEnabled(not strip.full()) + photo_hint 计数文案（含空态文案）。
+  4) _pick_images：改调 self.strip.add_paths(paths)，用返回值报「已忽略 N 张」。
+  5) _load_images：读 self.strip.images() 判断有无未保存新图；
+     self.strip.set_images([...])。
+  6) write()：遍历 self.strip.images() 导入新图，成功后 set_images 就地转正。
+  7) reset()：self.strip.set_images([])（保留 _loaded_id 清理）。
+
+改动 app/tmp_check_images.py（自检脚本同步新 API）
+  form._images -> form.strip.images()；form._rebuild_strip() -> form.strip.set_images()
+  form._move_to_cover / _remove_image -> form.strip._move_to_cover / _remove
+  空态断言由「格数 1 = 只有＋」改为「图片数 0（＋ 不占格）」
+
+验证（QT_QPA_PLATFORM=offscreen，.venv\Scripts\python.exe）
+  tmp_check_images.py 实跑：
+    DB 段（临时副本）全部与改动前一致：建表 / 三图 / 封面同步 / 换封面+删 / 空列表
+    UI 段：空态图片数 0、提示「jpg / png / webp，最多 6 张（可跳过）」
+           载入已有图 1 -> ['bracket_1.jpg']
+           换封面 ['x1','x2','x3'] -> ['x3','x1','x2']；删封面后 2 张
+           reset 后 0 张、添加键可用、无大预览
+  ImageStrip 单测式冒烟：add_paths(同一张 ×8) -> 存 6 跳过 2、full=True；
+           add_paths(['nope.jpg']) -> 跳过 1；换封面/删除计数正确
+  lint：entry_forms.py / image_strip.py / tmp_check_images.py 均 0 诊断
+
+影响：仅新增支架页的图片区内部实现；缩略图尺寸（100×76、3 列、312px）、
+      上限 6、封面语义、import_image 落盘命名、add_manual(images=…) 写库逻辑均未变。
+
+风险 / 取舍：
+  1) form.strip 的类型从 QGridLayout 变成 ImageStrip，count() 语义由「网格格数
+     （含＋）」变为「图片数」；仓库内只有 tmp_check_images.py 用到，已同步。
+  2) 目前只有 BracketForm 一个消费者，组件化收益要等「支架编辑弹窗」落地才体现；
+     若最终不做编辑弹窗，这次拆分只换来更薄的 entry_forms.py。
+  3) 组件的 _move_to_cover / _remove 是私有方法，暂时没有公开的编程接口
+     （外部要改列表请用 set_images）；将来需要再加公开方法。
+
+================================================================================
+十六、按支架查页加编辑能力（支架图片 / 备注 / 新增车型）
+================================================================================
+需求（2026-10-28，用户两轮确认）：
+  「这个页面要可编辑」= 按支架查页（app/pages/bracket_page.py::BracketPage）。
+  ① 左侧支架卡：图片可增删换封面、可填备注；
+  ② 支架号**不可改**（用户明确否决级联改号）；
+  ③ 车型列表里能直接「增加车型」，不用回「新增支架」页。
+  设计稿：docs/支架页可编辑设计稿.html（右侧 TOC + 锚点 + 打印反色）。
+
+表结构（唯一破坏性改动）
+  scraper/store.py SCHEMA：brackets 增 note TEXT（新库直建）；
+    upsert_bracket 刻意只写 image_url / image_file / updated_at，不碰 note，
+    所以爬虫重抓不会抹掉手工备注（已实跑模拟验证）。
+  app/db.py
+    ensure_schema_ready() 改为返回 bool（本次是否改过结构）
+      旧：只跑 INDEXES 建表建索引
+      新：INDEXES 提交后再调 _add_bracket_note(conn)
+    _add_bracket_note(conn)：PRAGMA table_info(brackets) 缺 note 才
+      backup_database() -> ALTER TABLE brackets ADD COLUMN note TEXT
+      幂等，可反复调用；备份在改结构之前，失败可回滚到快照。
+
+仓储层
+  Repository.brackets()：SELECT 增加 k.note（缓存随 reload() 失效）
+  Repository.bracket_note(bracket_id) -> str（弹窗载入用）
+  Repository.save_bracket_meta(bracket_id, note=None, images=None) -> dict
+    - 先 backup_database()，再单事务写（与 add_manual 同策略）
+    - note=None 表示不动备注，images=None 表示不动图片，两者互相独立：
+      「只改备注」不会重写图片行，「只换图」也不会清掉备注（已实测）
+    - images 非 None 时复用 _save_bracket() 的整表对账（首张=封面、
+      不在列表里的旧图只删 bracket_images 行、磁盘文件保留）
+    - 支架不存在 -> ValueError（事务回滚，不写半条）
+    - 不提供改号：改号要级联 fitments / bracket_images，且磁盘文件名
+      bracket_<id>_<NN>.jpg 还压着旧号，收益远小于风险
+
+UI
+  新增 app/bracket_dialog.py（约 300 行）
+    _HintedDialog：标题 / 副标题 / hint / 取消+保存 的共用骨架；
+      注意字段名叫 payload 而不是 result —— result 会盖掉 QDialog.result()。
+    BracketEditDialog(repo, bracket_id)
+      支架号 QLineEdit(readOnly) + 「只读」chip；ImageStrip 复用（100×76 / 3 列 /
+      上限 6）；备注 QLineEdit + 「N / 200」chip；超长时 chip 变强调色并提示
+      「保存时截断」，保存时按 200 字截断并记 self.truncated。
+      保存顺序：新图先 import_image() 落盘成正式文件名，再一次性写库。
+    FitmentAddDialog(repo, bracket_id)
+      品牌（可编辑 QComboBox + 拼音补全）/ 车型（QLineEdit + 随品牌补全）/
+      年款（实时解析 chip：全部年款 / 2019 – 2023 / 格式错误）。
+      保存走 add_manual([(id, brand, model)], years_raw, targets=[(brand, model)])。
+      判重命中（added == 0）时**不关窗**，提示「已跳过（未写入）」，改年款可续。
+      信号统一在 _finish() 之后连接，避免构造期触发 _sync_* 撞上空引用。
+  app/pages/bracket_page.py
+    左卡新增：note QLabel（空则整行隐藏；超 90 字省略 + tooltip 全文）
+      与两个按钮（「编辑支架」「＋ 新增车型」），与原有「复制支架号」「在按
+      车型查中查看」排成两行；
+    run_query() 末尾 _show_note(info.get("note"))
+    edit_bracket() / add_fitment()：弹窗 Accepted 后走 _after_write()
+    _after_write() 改为 repo.reload() + refresh_data()（原来只 run_query，
+      _catalog 不重建会导致改完备注/换完封面左卡不刷新）
+  app/image_strip.py
+    import_image() 从 pages/entry_forms.py 搬进来（两个消费者都要导入图片，
+    留在 entry_forms 会形成 bracket_dialog -> entry_forms 的反向依赖）。
+    搬迁后 entry_forms 不再 import config / thumbs（十五节那句「thumbs 仍保留」
+    已失效，以本节为准）。
+
+自检 app/tmp_check_bracket_meta.py（DB 段只在临时副本上跑）
+  迁移：迁移前无 note -> 首次 ensure True -> 再次 False（幂等）-> 列存在，300 行未变
+  save_bracket_meta：只改备注（图片列表不变）、只改图片（备注保住、封面=首张）、
+    备注清空、未知支架报「支架 X 不存在，可能已被删除」；
+    模拟爬虫 upsert 后 note 仍在
+  UI：左卡四按钮文案正确；空备注隐藏；长备注省略且 tooltip 有全文
+  编辑弹窗：号只读、载入 2 张图与备注、追加新图 -> 落盘 bracket_1_03.jpg、
+    改备注保存成功；205 字 -> chip 205/200 + 提示、保存后库内 200 字
+  新增车型：2019-2023 -> chip「2019 – 2023」、保存后 fitments 多一行
+    (M, 零测品牌, 零测车型, 2019-2023, 2019, 2023)；重复保存不关窗且提示跳过
+  刷新：_after_write() 后备注与条数即时更新
+
+回归：tmp_check_images / tmp_check_save / tmp_check_edit / tmp_check_edit_ui /
+      tmp_check_noyear 全部 exit=0
+lint：app 目录 0 诊断
+
+真实库现状（重要）
+  写本节时真实库 scraper/data/ky.db 已完成迁移（由一次 Repository() 构造触发）：
+    - brackets 现为 bracket_id / image_url / image_file / updated_at / note
+    - 迁移前快照：scraper/data/backup/ky-20261028-140309.db（已核对无 note 列）
+  应用已重启（新代码）验证可正常打开。
+
+影响：按支架查页多了改图 / 改备注 / 加车型三个入口；两个查询页与卡片页的读路径
+      未改（仍只认封面 image_file）。新增页行为未变。
+
+风险 / 取舍：
+  1) 首次启动对真实库执行 ALTER TABLE（有快照兜底）；打包版旧 exe 不认识 note 列，
+     但 SQLite 允许多余列，读旧字段不受影响。
+  2) 每次保存（含只改备注）都会写一份整库快照，data/backup/ 只保留 10 份，
+     频繁改备注会把更早的备份挤掉。
+  3) 图片先落盘再写库：若写库失败，会留下孤儿图片文件（与新增页原有行为一致）。
+  4) 备注 200 字上限只在 UI 侧约束，直接改库不受限。
+  5) 支架号仍不可改：号错了只能新建一个再把旧记录挪过去（未提供批量挪迁工具）。
+
+================================================================================
+十七、行首勾选 + 批量删除（按支架查 / 按车型查两页）
+================================================================================
+需求（2026-10-28）：用户圈出操作列的「删除」并要求「把这个删除按钮放在列表上方，
+给列表每一行加个 checkbox，这样可以多选，做批量删除」。追问确认：
+  ① Delete 键「只删勾选，无勾选不动作」；
+  ② 选中后的蓝色行背景要去掉；
+  ③ 按车型查页同步改成同一套交互。
+  设计稿：docs/支架页批量删除设计稿.html（TOC + 锚点 + 打印反色）。
+
+模型层 app/models.py
+  DictTableModel 新增勾选列能力（列键 CHECK_KEY = "__check__"）：
+    checked_changed = Signal()      勾选增删 / 全选 / set_rows 之后发出
+    data()：勾选列返回 CheckStateRole，DisplayRole 固定空串，文字居中
+    flags()：勾选列加 ItemIsUserCheckable
+    setData()：处理 CheckStateRole（按行 id 存进 _checked），不再走编辑通路
+    checked_ids() / checked_rows() / checked_count() / set_all_checked() / clear_checked()
+    set_rows()：把 _checked 与新行 id 求交集（换查询不会残留已消失的选择）
+  行 id 取 row["id"]，与两个查询页的 SQL 一致。
+
+仓储层 app/db.py
+  新增 Repository.delete_fitments(row_ids) -> {"deleted", "missing", "backup"}
+    - 先 SELECT 出仍然存在的 id（一次 IN，按 400 分片，避开变量上限）
+    - 全部失效时直接返回，不写快照
+    - 备份一次 + 一个事务删完（逐条调 delete_fitment 会写 N 份快照、N 个事务，
+      data/backup/ 只留 10 份，连删十几条就把更早的备份挤掉）
+    - 已失效的 id 计入 missing，不算失败
+    - 被爬虫锁库时沿用 _write_error -> 「数据库正被别的程序占用」
+  模块级 _marks() / _chunks() 两个小工具（IN 列表占位符与分片）。
+
+UI app/ui.py
+  BatchBar(QWidget)：表格上方的批量操作条（高 34）
+    全选 QCheckBox（三态）+「删除选中（N）」QPushButton#danger + 右侧计数
+    bind(table) 后自动跟随：全选三态、按钮可用性与数量、共 N 条 · 已选 M
+    delete_requested 信号（不传参，页面自己读 checked_ids）
+  confirm_delete(parent, rows, bracket_id="") -> bool
+    支持 1 条与 N 条；最多逐条列 8 行（多的写「……另 N 条」）；统计爬虫来源条数；
+    按钮文案「删除 N 条」，默认按钮是「取消」。
+  Page.make_table()：列里出现 __check__ 时把 selectionMode 设为 NoSelection
+    —— 这就是「去掉蓝色行背景」，且行内「编辑」链接走 delegate 的 editorEvent，
+    不依赖选中状态（已用合成的 MouseButtonRelease 验证仍能触发）。
+  DetailPane（按车型查页的明细表）
+    COLUMNS 首列插 __check__（36），操作列 96 -> 60；chips/dots 2/4 -> 3/5
+    LinkDelegate 由 ("编辑","删除") 改为 ("编辑",)
+    delete_requested(int) 改为 delete_many_requested(list)
+    delete_selected()（Delete 键）改为「只删勾选」
+    clear() 时 set_rows([]) + bar.refresh()
+
+主题 app/theme.py
+  新增 QWidget#batchBar（panel 底 + 下边线）与 QCheckBox / QTableView::indicator
+  方框样式：13×13、圆角 3、未选透明底 + 边线、选中实心 accent_bg。
+  原先 QSS 没有任何 checkbox 规则，深色主题下默认指示器几乎看不见。
+
+页面
+  app/pages/bracket_page.py
+    COLUMNS 首列 __check__，操作列 96 -> 60；chips 2->3、dots 4->5；OPS_COLUMN = 6
+    表格上方插 BatchBar；删除键与工具条都走 delete_checked()
+    delete_checked()：取 checked_rows -> ui.confirm_delete -> repo.delete_fitments
+      -> _after_write()（重新载入字典 + 重查 + 清空勾选）-> 状态栏「已删除 N 条」
+    删除 delete_row / delete_selected / _selected_row / _confirm_delete（行内删除已移除）
+    新增 _status() 统一写状态栏
+  app/pages/model_page.py
+    detail.delete_requested -> delete_many_requested；Delete 键转 detail.delete_selected
+    delete_row / delete_selected / _confirm_delete 合并为 delete_rows(ids)
+    删除 QMessageBox 导入（确认框已收到 ui.confirm_delete）
+
+自检 app/tmp_check_batch_delete.py（DB 段只在临时副本上跑）
+  delete_fitments：删 3 条 -> deleted=3 / 快照 +1；重复删 -> 0/3 且不写快照；
+    空列表抛 ValueError「没有勾选要删除的记录」
+  模型：勾选列可勾、无文字、checked_ids 顺序正确；全选/全不选；set_rows 清掉失效 id
+  按支架查页：NoSelection、操作列只剩「编辑」、共 910 条 · 已选 0、
+    全选 -> 910、再点 -> 0、勾 3 条 -> 半选框、删除后 910 -> 907、快照 +1、
+    勾选清空
+  按车型查页：明细 7 列、勾 1 条 -> 删除选中（1）可用、删除后行数 -1 且库内已删
+  NoSelection 下行内「编辑」：合成 MouseButtonRelease 经 delegate 正常发出 (0, 0)
+  截图：logs/ui_shots/batch_dark.png / batch_light.png（勾选框与工具条两套主题）
+
+回归：tmp_check_edit_ui（已同步改为批量删除路径）/ tmp_check_edit /
+      tmp_check_save / tmp_check_images / tmp_check_bracket_meta / tmp_check_noyear /
+      tmp_check_brand / tmp_check_pickers 全部 exit=0
+lint：app 目录 0 诊断；应用已重启（新代码）。
+
+影响：两个查询页的明细表多了勾选列与批量删除工具条，行内「删除」消失、
+      行选中高亮消失（改为勾选）；编辑入口不变。
+
+风险 / 取舍：
+  1) 删掉行选中高亮后，键盘上下键选行（按车型查页 ResultList 仍可用）与明细表
+     选中态不再一致；明细表本身没有键盘选行需求，暂未补。
+  2) Delete 键在没有勾选时完全不动作（用户明确要求）：习惯「选中一行按 Delete」
+     的用户会觉得变慢，属于有意的安全取向。
+  3) 批量删除目前只删 fitments，不动 brands / models 字典（与旧的单条删除一致）。
+  4) 勾选上限没限制：全选 910 条后点删除会一次删 910 条，只靠确认框拦；
+     如需要可加「单次最多删 N 条」的保护。
+  5) tmp_check_batch_delete.py 里合成 QMouseEvent 用的是已弃用构造重载，
+     仅测试脚本使用，不影响应用代码。
+
+================================================================================
+十八、「新增车型」改为「添加已有车型」（用户纠正语义）
+================================================================================
+问题（2026-10-28，用户截图指出）：
+  v1.0 的 FitmentAddDialog 让用户手输品牌 / 车型，输入不存在的就顺手建档（targets）。
+  用户要求的是「在**当前支架上添加车型**」，车型本身数据库里都已经存在 ——
+  手输会造出一堆近似品牌（「一汽奥迪」vs「一汽-奥迪」），建档是「新增」页的职责。
+
+改动 app/bracket_dialog.py
+  FitmentAddDialog（删除） -> FitmentPickDialog（新增）
+    title「添加车型」，副标题「为支架 X 号添加适配记录：只能勾选库里已有的车型」
+    候选来自 brands / models 两张字典表（全库 1481 条 brand+model），
+      品牌下拉「全部品牌 + 已有品牌」只做筛选（leading 放进 CheckList 头部）
+    复用 ui.CheckList（搜索 + 拼音 + 全选/清空 + 勾选跨筛选保留），
+      没有另写一套列表控件
+    单次上限 MAX_ROWS = 200，超出提示分批
+    年款 QLineEdit + 实时 chip（格式错则禁用保存）
+    保存按钮文案「添加（N 条）」/「添加（未选）」，未选或年款非法时置灰
+    写入：repo.add_manual(pairs, years_raw) —— **不传 targets**，
+      因此不会新建任何品牌 / 车型；判重命中（added == 0）不关窗并提示
+    弹窗宽度 460 -> 560（要放下候选列表）
+
+改动 app/pages/bracket_page.py
+  按钮文案「＋ 新增车型」->「＋ 添加车型」，tooltip 改为「把库里已有的车型加到当前支架」
+  add_fitment() -> add_fitments()：用 FitmentPickDialog，成功后状态栏回执
+    「已添加 N 条 · M 条已存在被跳过」
+
+文档同步
+  docs/支架页可编辑设计稿.html 升到 v1.1：
+    第 4 节整段重画为「只选不建」的勾选式弹窗（含已选态 / 重复态两屏），
+    TOC、尺寸表、6.3 接口段、7 异常表、8 对照表、9 实施状态一并更新
+  docs/支架页批量删除设计稿.html：左卡按钮文案同步为「＋ 添加车型」
+
+自检（tmp_check_bracket_meta.py 第 5 节重写）
+  候选 1481 条、品牌下拉 270 项（全部品牌 + 269 个已有品牌）
+  未选时「添加（未选）」禁用；勾 1 条 -> 「添加（1 条）」可用
+  年款 2019-2023 -> chip「2019 – 2023」；保存后 fitments 多一行
+    (M, ARCFOX极狐, 考拉S, 2019-2023, 2019, 2023)，且未新建任何字典条目
+  重复添加 -> 不关窗 + 「都已存在…未写入」
+  换品牌后已勾选仍保留（1 条）
+  截图：logs/ui_shots/pick_dark.png / pick_light.png
+回归：tmp_check_bracket_meta / batch_delete / edit_ui / edit / save / images /
+      noyear 全部 exit=0；lint 0 诊断；应用已重启（新代码）。
+
+影响：该弹窗不再具备建档能力（有意收窄）；新增品牌 / 车型仍走「新增」页。
+
+风险 / 取舍：
+  1) 用户若在「添加车型」时发现库里没有目标车型，必须切到「新增」页建档再回来，
+     多一步；但换来字典干净（避免手输错字产生近似品牌）。
+  2) 候选是「全库 brand+model」笛卡尔展开（1481 条），大库下首次打开有轻微延迟，
+     靠 CheckList 的搜索框过滤；已加 200 条单次上限。
+  3) 「添加车型」按车型维度（不含年款批量），若要给同一车型加多段年款，
+     仍需分次添加或到「新增」页批量录。
+
+================================================================================
+十九、新增支架页补「备注」字段（与按支架查页共用 brackets.note）
+================================================================================
+问题（2026-10-28 用户截图指出）：刚在按支架查页加的备注，在「新增 → 新增支架」
+表单里没有，建档时填不了备注，只能建完再去详情页补。
+
+改动 app/pages/entry_forms.py（BracketForm）
+  支架信息卡新增一行：标签「备注」+ QLineEdit + 右侧 chip「N / 200」，
+  位置在图片缩略图条之后、保存（仅建档）/ 清空 之前（标签宽 52，与其他行对齐）。
+  MAX_NOTE 直接从 bracket_dialog 引入（与「编辑支架」弹窗同一个常量，避免两处漂移）。
+  _on_note_changed()：实时更新计数，超 200 字 chip 转 chipNew 强调色（不拦输入）。
+  _load_images() 改名后的职责扩为「载入图片 + 备注」：
+    命中已有支架 -> 带出它的图与备注；
+    库里没有的新号 -> 只有「上一次载入的是已有支架」时才清空图与备注，
+      否则保留用户正在输入的内容（避免改号时把刚写的备注清掉）。
+    为此新增 _loaded_known 标记，reset() 一并复位。
+  write()：note 超长先截到 200，再随 bracket dict 一起提交
+    bracket={"bracket_id":…, "images":…, "note":…}。
+
+改动 app/db.py
+  _save_bracket()：只有 bracket dict 里显式给了 note 才写
+  （UPDATE brackets SET note = ? WHERE bracket_id = ?），None 表示这条调用不管备注。
+  这样 save_bracket_meta(images=…) 只换图时不会把备注写成 NULL，
+  爬虫的 upsert_bracket 依旧完全不碰 note。
+
+文档同步 docs/新增页改版设计稿.html：追加 v3 补充块（位置、带出规则、截断、不影响图片）。
+
+自检 app/tmp_check_note_form.py（DB 只在临时副本上跑）
+  初始 chip 0 / 200；输入 10 字 -> 10 / 200；205 字 -> 205 / 200 且 chip 转 chipNew
+  保存后库内备注正确（「测试备注 · 仅建档」），提示「已建档（未生成适配记录）」
+  改支架号为已有支架 1 -> 带出「老备注」；再改成 1X（不存在）-> 清空
+  205 字保存 -> 库内 200 字
+  只改备注保存后，该支架的两张图仍在（未被清空）
+  截图：logs/ui_shots/note_dark.png / note_light.png
+回归：tmp_check_note_form / save / images / edit_ui / noyear / bracket_meta /
+      batch_delete 全部 exit=0；lint 0 诊断；应用已重启（新代码）。
+
+影响：新增支架页多一个可选输入；不填则 note 写空串（与手工建档一致）。
+      备注仍只在 brackets 表一处存储，两个入口读写同一字段。
+
+风险 / 取舍：
+  1) 「先填备注再改支架号」时，若上一次载入的是已有支架且新号不存在，备注会被清空
+     （这是有意为之：避免把 A 支架的备注写到 B 上）。
+  2) 备注 200 字上限只在 UI 截断，直接改库不受限（与弹窗一致）。
+  3) 「新增车型」模式（ModelForm）没有备注行：备注属于支架，不属于某一对车型关系。
+
+================================================================================
+二十、候选工具条「＋ 新增品牌」改为「＋ 新增车型」
+================================================================================
+需求（2026-10-28 用户截图圈出按钮）：把「新增品牌」改成「新增车型」。
+判断：不只是改文案 —— 日常补的是车型，品牌多半已经在库里；旧弹窗强制「填品牌名 +
+多行车型」，用起来像在维护品牌。所以弹窗一起改造。
+
+改动 app/brand_dialog.py（整体重写，约 230 行）
+  NewBrandDialog -> NewModelDialog（文件里不再有旧类名，仓库内也无残留引用）
+    标题「新增车型」；副标题「车型挂在品牌下：已有品牌直接选，新品牌名会一并创建」
+    品牌：QLineEdit -> 可编辑 QComboBox（addItems 已有品牌 + ui.attach_completer），
+      chip「已存在 / 将新建」随选择变化；新品牌名仍可直接输入（会一并创建）
+    车型行：沿用动态行（＋ 再添一行 / 每行 ×，删光自动补空行，上限 20 行）
+    计数与按钮：右侧「将新增 N 个车型」；保存按钮文案「保存（N 个车型）」，
+      N = 0 时置灰 —— 「只填品牌不填车型」被拒（提示「请至少填一个车型名」）
+    回传：brand_name / model_list（本次提交的车型名）/ result（add_brand_models 结果）
+
+改动 app/pages/entry_forms.py
+  ModelForm / BracketForm：按钮文案「＋ 新增车型」、tooltip 改写、方法
+    _open_new_brand -> _open_new_model，改用 NewModelDialog；
+    BracketForm 成功后额外把新车型 set_checked 进候选（省一次再找），
+    提示改成「已新增车型 N 个（品牌「X」）…，已勾选」。
+  「新增车型」模式仍只把品牌填回品牌框（该页候选是支架，不勾车型）。
+  顺带把两处注释里的「新增品牌」字样同步。
+
+文档同步
+  docs/新增页改版设计稿.html：第 10 节标题与按钮文案改为「新增车型」，
+    新增 v4 修订块（品牌框改可编辑下拉、不允许只建品牌、按钮带数量、自动勾选）
+  docs/支架页可编辑设计稿.html：「需要新车型」一行改为「＋ 新增车型」
+
+自检 app/tmp_check_brand.py（已按新 API 重写，DB 只在临时副本上跑）
+  品牌可选可输、已有品牌 269 项；品牌+两车型 -> 新建品牌成功（models_added=2）
+  重复品牌再存 -> brand_created=False / added=1 / skipped=1
+  已有品牌（丰田）补车型 -> 只加车型不建品牌
+  「新增支架」页建完自动勾选 1 条，提示「已新增车型 1 个…已勾选」
+  只填品牌 -> 保存键置灰 + 提示「请至少填一个车型名」，result 为空
+  空品牌 -> 「请先选或填一个品牌」；行数上限 20 行提示正常
+  工具条按钮文案：全选 / 清空 / ＋ 新增车型（两页一致）
+  截图：logs/ui_shots/newmodel_dark.png / newmodel_light.png
+回归：tmp_check_brand / note_form / save / noyear / edit_ui / bracket_meta /
+      batch_delete / images 全部 exit=0；应用已重启（新代码）。
+  注：本次 read_lints 报出 26 条 Ruff 风格 warning（% 格式化、编码注释、返回值写法等），
+    全部属于本项目既有写法，非本次引入的错误，未做批量风格改写。
+
+影响：两个「新增」模式共用同一个弹窗；品牌维护不再能「只建品牌」。
+      字典写入仍是 add_brand_models（brands + models），不产生 fitments。
+
+风险 / 取舍：
+  1) 「只建品牌」能力被移除：真需要单独建品牌（没有任何车型）时，只能建一个占位车型
+     或直接改库；这是有意的（按钮语义就是新增车型）。
+  2) 品牌下拉可编辑，用户仍可能手输错字造出近似品牌（与改造前一致，未加强校验）；
+     若需要可加「该品牌不存在，是否新建？」二次确认。
+  3) 自动勾选只作用于「新增支架」页；「新增车型」页候选是支架，不适用。
+
+================================================================================
+二十一、隐藏「新增车型」页签（新增页只留「新增支架」）
+================================================================================
+需求（2026-10-28 用户截图圈出页签）：把「新增车型」这个 tab 隐藏。
+
+改动 app/pages/add_page.py
+  新增模块常量：
+    HIDDEN_MODES = ("新增车型",)   # 与 main.py 的 HIDDEN_VIEWS 同一思路
+    DEFAULT_MODE = "新增支架"
+  __init__：建 2 个 seg 按钮后，把 HIDDEN_MODES 里的按钮 setVisible(False)；
+    若只剩 1 个可见按钮，连那一个也收起（点了也不会切换，留着只是噪音），
+    顶栏 QFrame#filterBar 高度 56 -> 40，退化成右侧信息条（手工条数 / 数据时间）。
+    初始模式改为 MODE_LABELS.index(DEFAULT_MODE)（原来写死 buttons()[0]），
+    stack 建好后再 set_mode(...)，保证页与按钮选中态一致。
+  ModelForm 仍留在 QStackedWidget 里：set_mode(0) 或删掉 HIDDEN_MODES 即可恢复。
+  类 docstring 与 _on_dictionary_changed 注释同步。
+
+文档同步 docs/新增页改版设计稿.html：第 3 节前加 v5 修订块（隐藏页签、40px 细条、
+恢复方式），并注明原来的「两个模式并排」示图只作历史参考。
+
+自检
+  tmp_shot_addpage.py（新增）：深色 / 浅色各一张截图，打印
+    mode tabs = [('新增车型', False), ('新增支架', False)]、当前 stack = 1、bar 高 = 40
+    截图：logs/ui_shots/add_dark.png / add_light.png（页签行消失，只剩右侧信息条）
+  tmp_check_ui.py：顺手修掉一处早已失效的断言 —— 它还在读 BracketForm.years_chip，
+    但 SHOW_YEARS=False 之后该控件为 None（本次之前就报 AttributeError）；
+    改为按 SHOW_YEARS 分支，并补打 mode tabs 可见性。
+回归：tmp_check_brand / save / note_form / ui / edit_ui / noyear / bracket_meta /
+      batch_delete / images 全部 exit=0；lint 无新增错误；应用已重启（新代码）。
+
+影响：进入「新增」页不再看到模式切换，直接是「新增支架」表单；
+      「新增车型」入口仍可通过「按支架查」页的「＋ 添加车型」完成（选已有车型）。
+
+风险 / 取舍：
+  1) 「新增车型」表单入口被藏起来后，没有任何界面入口能手工新建「品牌 + 车型」对，
+     只能通过「＋ 新增车型」按钮（候选工具条）建 —— 那条路径本来就在，够用。
+  2) set_mode(0) 仍可程序调用，但按钮不可见时用户无从点击；将来若要恢复，
+     删一行常量即可（不涉及逻辑改动）。
+  3) 顶栏高度变化（56 -> 40）会让该页内容整体上移 16px，与其他页顶部对齐略有差异。
+
+================================================================================
+二十二、导航「型号」改为「车架」
+================================================================================
+需求（2026-10-28 用户截图圈出导航按钮）：把「型号」改成「车架」。
+理由（我的理解，与用户用词一致）：这一页列的是支架的车架号卡片，「型号」容易与
+「车型」混淆，叫「车架」更贴合业务。
+
+改动（只动用户可见文案，不动类名 / 表结构 / 变量名）
+  app/main.py         VIEW_LABELS: ("按车型查", "按支架查", "品牌", "型号", "新增")
+                        -> ("按车型查", "按支架查", "品牌", "车架", "新增")
+                      （索引不变，Ctrl+4 / HIDDEN_VIEWS / DEFAULT_VIEW 全部照旧）
+                      注释「品牌 / 型号卡片」-> 「品牌 / 车架卡片」
+  app/pages/bracket_pick_page.py
+                      GROUP_TITLE "所有型号" -> "所有车架"
+                      计数文案「命中 N 个型号 / 共 N 个型号」-> 「…个车架」
+                      （搜索占位符「输入关键字…」不含「型号」，未改）
+  tmp_check_pickers.py / tmp_shot_note.py：注释与断言文案同步
+
+文档同步
+  docs/品牌与型号选择页设计稿.html 顶部加命名变更说明（本文其余「型号」保留为历史记录）
+  文件名未改（改名会丢失已有引用）
+
+验证
+  tmp_check_pickers.py 实跑：group title = 所有车架、count label = 共 300 个车架
+  tmp_shot_frames.py（新增）：nav = ['按车型查', '按支架查', '品牌', '车架', '新增']
+    截图 logs/ui_shots/frames_dark.png / frames_light.png（导航高亮 + 分组标题 + 计数）
+  应用已重启（新代码）。
+
+影响：导航第 4 个按钮、该页分组标题与计数文案；页面类名仍是 BracketPickerPage，
+      URL / 代码引用不受影响。
+
+风险 / 取舍：
+  1) 只改文案，内部仍叫 bracket_pick_page / PickerPage，代码可读性未变。
+  2) 「按支架查」页与其它文档里仍可能出现「型号」字样（历史记录），未做全文替换。
+  3) 若把「车架」理解为「车架号（VIN）」而非「支架编号」，文案可能仍有歧义；
+     需要更准确的说法（如「支架车架」）可再调。
+
+================================================================================
+二十三、新增页卡片标题改「新增车架」+「＋ 添加车型」上移勾选工具条
+================================================================================
+23.1 新增页左侧卡片标题（用户截图红框）
+需求：把「新增」页左侧卡片标题从「支架信息」改成「新增车架」，与导航「车架」统一。
+改动（只动文案）：
+  app/pages/entry_forms.py   BracketForm.TITLE  "支架信息" -> "新增车架"
+                            （标题标签 formTitle 由 TITLE 渲染，改一处全页生效）
+未改动：类名 BracketForm、表结构、变量名、字段标签（支架号 / 图片 / 备注）、保存逻辑。
+验证：tmp_shot_note.py 重出 logs/ui_shots/note_dark.png / note_light.png，
+      左卡标题显示「新增车架」，其余布局无变化。
+文档：docs/新增页改版设计稿.html 第 3 节前加 v6 修订 blockquote（已注明标签仍叫「支架号」）。
+
+23.2 「＋ 添加车型」按钮位置（本次需求）
+需求（用户截图圈出左卡的「＋ 添加车型」）：把这个按钮放到「删除选中」后面。
+改动：
+  app/ui.py  BatchBar
+      保存 self._row（主 QHBoxLayout）
+      新增 add_action(widget, primary=False)：插到 delete_btn 右侧、弹簧与计数之前，
+      统一设 PointingHandCursor；primary=True 时套 #primary 样式。
+      BatchBar 是公共组件（按车型查详情栏也在用），新增方法不改变原有布局，向后兼容。
+  app/pages/bracket_page.py
+      左栏 action_row 移除 fitment_btn，只留「在按车型查中查看」
+      右栏 bar.bind / delete_requested 之后创建 fitment_btn，再 self.bar.add_action(...)
+      按钮对象、tooltip、clicked -> add_fitments 全部保留，只换挂载点。
+未改动：add_fitments() 逻辑、FitmentPickDialog、批量删除逻辑、表格列定义。
+验证：tmp_shot_batch.py 重出 logs/ui_shots/batch_dark.png / batch_light.png：
+      工具条顺序 = 全选 | 删除选中（2） | ＋ 添加车型 | ... | 共 19 条 · 已选 2
+      左栏 = 复制支架号 | 编辑支架 ／ 在按车型查中查看
+      IDE diagnostics：app/ui.py、app/pages/bracket_page.py 均 0 报错。
+
+影响范围：仅「按支架查」页的工具条与左栏按钮分布；BatchBar 其他使用处布局不变。
+
+风险 / 取舍：
+  1) BatchBar 固定高 34px，新按钮沿用 QPushButton 默认 padding、未设固定高度，
+     深浅两套截图确认文字未被截断；若以后调大字号需同步调高 BatchBar。
+  2) 左栏「在按车型查中查看」现在独占一行，视觉上比原来孤立（功能不变）。
+  3) 调试脚本 tmp_check_bracket_meta.py 里打印文案仍写「左卡按钮」，
+     fitment_btn 已不在左卡，仅影响该脚本日志的可读性，本次未改。
+
+================================================================================
+二十四、review 后修复 P2 三项
+================================================================================
+来源：第二十三节之后的代码 review 结论，用户确认「修」。
+
+1) app/ui.py  BatchBar.add_action 多次调用顺序反了
+   现象：原实现每次都 insertWidget(indexOf(delete_btn) + 1)，挂第 2 个按钮时
+         会插到第 1 个前面，最终顺序与调用顺序相反（LIFO）。
+   改法：新增 self._action_count 计数器，
+         位置 = indexOf(delete_btn) + 1 + _action_count，调用后 += 1；
+         顺序与调用顺序一致。
+   验证：tmp_check_batchbar.py（临时，跑完已删）挂 A / B(primary=True) / C：
+         layout 顺序 = 全选 | 删除选中（0） | A | B | C | <spacer> | 计数，
+         B.objectName() = "primary"，PASS。
+
+2) app/ui.py  primary=True 的样式陷阱
+   objectName 在控件 polish / show 之后再改不会重绘样式（Qt 既定行为）。
+   处理：不改逻辑，只在 docstring 写明「必须在首次 show / polish 之前调用」。
+
+3) app/pages/bracket_page.py  add_fitments 空支架号静默失败
+   现象：按钮从左侧卡片挪到工具条后，支架号为空时点了没有任何反馈。
+   改法：self._status("请先选择支架号，再添加车型")，状态栏给提示。
+
+未改：edit_bracket 里同类的静默 return（用户只确认修 add_fitments；且左卡位置
+      上下文明显，误点概率低）。
+
+验证
+  tmp_shot_batch.py 重出 logs/ui_shots/batch_dark.png / batch_light.png：
+  工具条仍为 全选 | 删除选中（2） | ＋ 添加车型 | ... | 共 19 条 · 已选 2，视觉未变。
+  IDE diagnostics：app/ui.py、app/pages/bracket_page.py 均 0 报错。
+
+影响：仅 BatchBar 的插入位置算法 + 一处状态栏提示；按车型查详情栏同样用
+      BatchBar 但没调用 add_action，行为不变。
+
+风险：add_action 的位置依赖 delete_btn 为最后一个固定按钮；将来若在 delete_btn
+      之前插控件会错位，当前无此用法。
+
+================================================================================
+二十五、打包（bundle + 便携 zip + 安装包）
+================================================================================
+需求：用户「打个包」。
+命令：powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Portable -Setup
+
+产物（dist\）
+  KYBracket\              1173 个文件 / 128.6 MB   2026-10-28 15:36
+  KYBracket-portable.zip   63.4 MB                 15:36
+  KYBracket-Setup.exe      51.7 MB                 15:37（ISCC 编译 30.9 秒）
+
+插曲：环境安全删除拦截
+  首次直接跑 build.ps1 时，脚本内 Remove-Item dist\KYBracket -Recurse -Force
+  （1175 个文件）触发 safe-delete 的 SAFE_DELETE_BULK_CONFIRM_REQUIRED
+  （阈值 500 文件），PowerShell 报 NativeCommandError、构建在第 1 步中断。
+  处理：先手工删除该目录（单独审批），再跑 build.ps1 —— 此时 Test-Path 为假，
+  脚本跳过内部删除，PyInstaller 用自己的 --noconfirm 清空输出。
+  结论：以后重打包前先手动清 dist\KYBracket，可避免该拦截。
+
+验证
+  产物时间（15:36 / 15:37）晚于本轮源码改动（ui.py 15:16、bracket_page.py 15:16）。
+  PyInstaller 带 --clean，日志里 Analysis / PYZ / PKG / COLLECT 全部重建。
+  未做安装包实机冒烟测试（需装到干净目录跑一遍）。
+
+打包内容：app 代码 + PySide6 + pypinyin + scraper/normalize.py + data
+（ky.db / images / thumbs）。tmp_*.py 不在 import 图里，不会进包。

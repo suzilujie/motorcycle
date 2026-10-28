@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1400" />
+<title>KY 支架查询 · 品牌 / 型号 选择页设计稿 v1.0</title>
+<style>
+:root{
+  --bg:#0f172a; --surface:#1e293b; --surface3:#334155; --line:#334155; --stroke:#475569;
+  --text:#e2e8f0; --dim:#94a3b8; --faint:#64748b; --strong:#f1f5f9;
+  --blue:#60a5fa; --green:#4ade80; --orange:#fb923c; --red:#f87171; --purple:#c4b5fd; --cyan:#67e8f9;
+  --code-bg:#0b1220;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--text);font-size:16px;line-height:1.75;
+  font-family:"Microsoft YaHei UI","PingFang SC","Segoe UI",system-ui,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:32px 24px 120px}
+
+/* ---------- TOC ---------- */
+#toc{position:fixed;right:18px;top:24px;width:200px;max-height:calc(100vh - 48px);overflow:auto;
+  background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:12px 10px;font-size:13px;line-height:1.6}
+#toc h4{margin:0 0 8px;font-size:13px;color:var(--strong);border-bottom:1px solid var(--line);padding-bottom:6px}
+#toc a{display:block;color:var(--dim);text-decoration:none;padding:2px 6px;border-left:2px solid transparent}
+#toc a:hover{color:var(--strong);background:var(--surface3)}
+#toc a.active{color:var(--blue);border-left-color:var(--blue);background:var(--surface3)}
+
+/* ---------- headings ---------- */
+h1{font-size:28px;color:var(--strong);margin:0 0 8px;padding-bottom:12px;border-bottom:2px solid var(--stroke)}
+h2{font-size:21px;color:var(--strong);margin:44px 0 16px;padding:6px 0 8px 12px;border-left:4px solid var(--blue);border-bottom:1px solid var(--line)}
+h3{font-size:17px;color:var(--strong);margin:26px 0 10px;padding-left:10px;border-left:3px solid var(--stroke)}
+h4{font-size:15px;color:var(--strong);margin:16px 0 8px;font-weight:700}
+p{margin:8px 0}
+b,strong{color:var(--strong)}
+code{background:var(--code-bg);padding:1px 5px;border-radius:2px;font-size:13px;color:var(--cyan)}
+ul,ol{margin:8px 0;padding-left:22px}
+li{margin:4px 0}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px}
+th{background:var(--surface3);color:var(--strong);text-align:left;padding:7px 10px;border:1px solid var(--line);font-weight:600}
+td{padding:7px 10px;border:1px solid var(--line);vertical-align:top}
+tbody tr:nth-child(even){background:rgba(51,65,85,.18)}
+
+pre{background:var(--code-bg);border-left:3px solid var(--stroke);padding:12px 14px;overflow:auto;
+  font-size:13px;line-height:1.6;margin:10px 0;color:var(--text)}
+.card{background:var(--surface);border-left:3px solid var(--blue);padding:12px 16px;margin:14px 0}
+blockquote{margin:14px 0;padding:10px 16px;background:var(--surface);border-left:3px solid var(--orange);color:var(--dim)}
+.muted{color:var(--faint);font-size:13px}
+.tag{display:inline-block;padding:1px 7px;border:1px solid var(--stroke);color:var(--dim);font-size:12px;margin-right:6px}
+.tag.rec{border-color:var(--green);color:var(--green)}
+
+/* ---------- app mock (KYBracket dark palette) ---------- */
+.mockrow{display:flex;flex-wrap:wrap;gap:20px;margin:16px 0}
+.mockbox{width:640px}
+.mockbox .cap{font-size:13px;color:var(--dim);margin-top:8px;border-left:2px solid var(--stroke);padding-left:8px}
+.win{width:1280px;height:800px;transform:scale(.5);transform-origin:top left;background:#2c2c2c;
+  border:1px solid #4c4c4c;display:flex;flex-direction:column;overflow:hidden;
+  font-family:"Segoe UI Variable","Segoe UI","Microsoft YaHei UI",sans-serif;
+  --w-bg:#2c2c2c;--w-panel:#363636;--w-card:#3a3a3a;--w-border:#4c4c4c;--w-input:#262626;
+  --w-text:#f2f2f2;--w-dim:#b4b4b4;--w-faint:#868686;--w-accent:#6cc9ff;--w-accentbg:#1a86d9}
+
+.win .titlebar{height:32px;flex:0 0 auto;background:#363636;border-bottom:1px solid #4c4c4c;
+  display:flex;align-items:center;justify-content:space-between;padding-left:12px}
+.win .titlebar .t{font-size:12px;color:#f2f2f2}
+.win .titlebar .btns{display:flex}
+.win .titlebar .btns span{width:45px;height:32px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#c7c7c7}
+
+.win .topbar{flex:0 0 auto;background:#363636;border-bottom:1px solid #4c4c4c;
+  padding:8px 14px;display:flex;align-items:center;gap:12px}
+.win .gsearch{flex:1;max-width:300px;height:28px;background:#262626;border:1px solid #4c4c4c;
+  border-radius:3px;display:flex;align-items:center;padding:0 8px;font-size:12px;color:#868686}
+.win .navs{display:flex;gap:2px;margin-left:4px}
+.win .nav{padding:5px 12px;font-size:12px;color:#b4b4b4;border-bottom:2px solid transparent}
+.win .nav.on{color:#f2f2f2;border-bottom-color:#6cc9ff;background:rgba(108,201,255,.10)}
+.win .nav.new{color:#6cc9ff}
+
+.win .filterbar{flex:0 0 auto;height:56px;background:#303030;border-bottom:1px solid #4c4c4c;
+  display:flex;align-items:center;gap:10px;padding:0 16px}
+.win .fsearch{width:320px;height:32px;background:#262626;border:1px solid #4c4c4c;border-radius:3px;
+  display:flex;align-items:center;padding:0 10px;font-size:13px;color:#868686}
+.win .fsearch.focus{border-color:#6cc9ff}
+.win .fsearch .cur{color:#f2f2f2}
+.win .fhint{font-size:12px;color:#868686;margin-left:auto}
+
+.win .pbody{flex:1;display:flex;min-height:0;background:#2c2c2c}
+.win .scroll{flex:1;overflow:hidden;padding:6px 20px 12px}
+
+.win .grp{display:flex;align-items:center;gap:8px;padding:14px 2px 8px;border-bottom:1px solid #3a3a3a;margin-bottom:10px}
+.win .grp .dot{width:18px;height:18px;border-radius:50%;border:2px solid #6cc9ff;
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:#6cc9ff}
+.win .grp .lbl{font-size:13px;color:#868686}
+.win .grp .ch{font-size:19px;color:#6cc9ff;font-weight:600;letter-spacing:.5px}
+
+.win .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.win .pcard{height:64px;background:#3a3a3a;border:1px solid #4c4c4c;border-radius:4px;
+  display:flex;align-items:center;gap:12px;padding:0 14px}
+.win .pcard.hover{border-color:#6cc9ff;background:#404040}
+.win .pcard.sel{border-color:#6cc9ff;background:#3c4a55}
+.win .pcard .logo{width:40px;height:40px;flex:0 0 auto;border-radius:2px;background:#262626;
+  display:flex;align-items:center;justify-content:center;font-size:15px;color:#b4b4b4;border:1px solid #4c4c4c}
+.win .pcard .bullet{width:10px;height:10px;border-radius:50%;background:#8a8a8a;flex:0 0 auto;margin-left:6px}
+.win .pcard .nm{font-size:14px;color:#f2f2f2}
+.win .pcard .meta{margin-left:auto;font-size:11px;color:#868686}
+
+.win .emptybox{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#868686}
+.win .emptybox .big{font-size:16px;color:#b4b4b4}
+.win .emptybox .sm{font-size:12px}
+
+.win .status{height:24px;flex:0 0 auto;background:#363636;border-top:1px solid #4c4c4c;
+  display:flex;align-items:center;gap:16px;padding:0 14px;font-size:11px;color:#b4b4b4}
+
+/* ---------- interactive prototype ---------- */
+.win .fin{height:32px;width:320px;background:#262626;border:1px solid #4c4c4c;border-radius:3px;
+  color:#f2f2f2;font-size:13px;padding:0 10px;outline:none;font-family:inherit}
+.win .fin:focus{border-color:#6cc9ff}
+.win .fin::placeholder{color:#868686}
+.win .nav{cursor:pointer;user-select:none}
+.win .nav:hover{color:#f2f2f2}
+.win .pcard{cursor:pointer}
+.win .pcard:hover{border-color:#6cc9ff;background:#404040}
+.win{position:relative}
+.win .page .scroll{overflow-y:auto}
+.win .page .scroll::-webkit-scrollbar{width:8px}
+.win .page .scroll::-webkit-scrollbar-track{background:#262626}
+.win .page .scroll::-webkit-scrollbar-thumb{background:#5f5f5f;border-radius:4px}
+.win .toast{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);background:#1a86d9;color:#fff;
+  font-size:13px;padding:8px 18px;border-radius:3px;opacity:0;transition:opacity .18s;pointer-events:none;white-space:nowrap;z-index:5}
+.win .toast.on{opacity:1}
+.win .page{display:none;flex:1;min-height:0;flex-direction:column}
+.win .page.on{display:flex}
+
+@media print{
+  :root{--bg:#ffffff;--surface:#ffffff;--surface3:#eef2f7;--line:#cbd5e1;--stroke:#94a3b8;
+    --text:#1f2937;--dim:#475569;--faint:#64748b;--strong:#0f172a;--code-bg:#f1f5f9}
+  html{color-scheme:light}
+  body{background:#fff;color:#1f2937}
+  #toc{display:none}
+  .wrap{max-width:none;padding:0}
+  h1,h2,h3,h4,b,strong{color:#0f172a}
+  code{color:#0f766e}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>品牌 / 型号 选择页 · 设计稿 v1.0</h1>
+<p class="muted">项目 KYBracket（后视镜支架查询）· PySide6 桌面应用 · 2026-10-26 · <span class="tag">未提交</span><span class="tag">未构建</span></p>
+
+<div class="card">
+<b>本文档目的</b>：把用户给的两张参考图（品牌选择、全部型号）落成本项目可实现的桌面界面，明确接入方式、尺寸规范与代码落点，供拍板后再动代码。
+</div>
+
+<blockquote><b>命名变更（2026-10-28）：</b>用户要求把导航与页面文案里的<b>「型号」统一改为「车架」</b>
+（「型号」容易和「车型」混淆；这一页列的是支架车架号卡片）。已改：
+<code>main.py</code> 的 <code>VIEW_LABELS</code>、<code>bracket_pick_page.py</code> 的
+<code>GROUP_TITLE = "所有车架"</code> 与计数文案「共 N 个车架 / 命中 N 个车架」。
+本文其余位置仍沿用旧称「型号」，仅作历史记录，不再逐一改写。</blockquote>
+
+<!-- ============ 1 ============ -->
+<h2 id="s1">1. 需求与参考图对应</h2>
+
+<table>
+<thead><tr><th style="width:110px">参考图</th><th style="width:150px">看到的形态</th><th>落到本项目</th></tr></thead>
+<tbody>
+<tr>
+<td>图 1</td>
+<td>品牌选择页<br>顶部搜索框「输入关键字...」<br>按「字母 A / 字母 B」分组<br>两列白色卡片，左 logo 右品牌名</td>
+<td><b>品牌选择页</b>（BrandPickerPage）<br>数据源 <code>db.brands()</code> → <code>brand / logo_file / model_count</code><br>logo 用已有的 <code>data/images/brand_*.jpg</code>（269 个，目前 UI 从未显示过）</td>
+</tr>
+<tr>
+<td>图 2</td>
+<td>型号选择页<br>顶部搜索框<br>单一分组「所有型号」<br>两列卡片，左灰点右型号名（1号 / 3A号 / 4号…）</td>
+<td><b>支架型号选择页</b>（BracketPickerPage）<br>数据源 <code>db.brackets()</code> → <code>bracket_id / image_file / fitment_count</code><br>无 logo 用圆点占位，与参考图一致</td>
+</tr>
+</tbody>
+</table>
+
+<h4>两页的共同结构</h4>
+<pre>ui.Page 脚手架
+├─ filter_bar (56px, #filterBar)     ← 搜索框 320×32 + 右侧计数提示
+└─ body
+   └─ QScrollArea (border:none, 透明)
+      └─ 内容 QWidget
+         ├─ 分组标题 QFrame#groupHead   （圆点 + 「字母」+ 大字母）
+         └─ QGridLayout 两列            （QFrame#pickCard × N）</pre>
+
+<!-- ============ 2 ============ -->
+<h2 id="s2">2. 现状与差距</h2>
+
+<table>
+<thead><tr><th style="width:140px">维度</th><th>现状</th><th>参考图要求</th><th style="width:70px">差距</th></tr></thead>
+<tbody>
+<tr><td>导航</td><td>顶部 3 个分段按钮：按车型查 / 按支架查 / 新增（<code>main.py:27</code>）</td><td>独立整页</td><td>需加槽位</td></tr>
+<tr><td>品牌选择</td><td><code>QComboBox</code> 可编辑 + 拼音补全（<code>model_page.py:29-33</code>）</td><td>两列卡片网格</td><td>控件缺失</td></tr>
+<tr><td>支架号选择</td><td><code>QComboBox</code>（<code>bracket_page.py:28-32</code>）</td><td>两列卡片网格</td><td>控件缺失</td></tr>
+<tr><td>品牌 logo</td><td><b>已有 269 个文件，代码从未渲染</b></td><td>卡片左侧显示</td><td>需接 <code>ui.fill_plate</code></td></tr>
+<tr><td>字母分组</td><td>无</td><td>A / B / C… 分组</td><td>用 <code>search.keys()</code> 现算</td></tr>
+<tr><td>卡片样式</td><td>无（只有 <code>#pickedBody</code> 卡片底可借）</td><td>白/深灰圆角卡片</td><td>需新增 QSS</td></tr>
+</tbody>
+</table>
+
+<!-- ============ 3 ============ -->
+<h2 id="s3">3. 接入方案对比</h2>
+
+<table>
+<thead><tr><th style="width:60px">方案</th><th style="width:210px">做法</th><th>优点</th><th>缺点 / 风险</th></tr></thead>
+<tbody>
+<tr>
+<td><b>A</b></td>
+<td>纯独立浏览页：导航加「品牌」「型号」两个 tab，页面只负责浏览与跳转</td>
+<td>几乎不动现有代码，新增 2 个文件 + <code>main.py</code> 3 处挂载</td>
+<td>点了卡片之后「发生什么」不明确，容易变成死页</td>
+</tr>
+<tr>
+<td><b>B</b></td>
+<td>改造为选择器页：把现有 <code>QComboBox</code> 换成「选择品牌…」按钮，点开整页，选完自动返回并预填</td>
+<td>交互最接近参考图，下拉彻底消灭</td>
+<td><b>影响面最大</b>：<code>model_page.py</code>、<code>bracket_page.py</code>、<code>entry_forms.py</code> 三处下拉都要改；要维护「从哪来、回哪去」的状态，回归风险高</td>
+</tr>
+<tr>
+<td><b>C</b> <span class="tag rec">推荐</span></td>
+<td>独立页 + 点选跳转：新增两页进导航，点品牌卡片 → 切到「按车型查」并预填该品牌、自动加载车型；点型号卡片 → 切到「按支架查」并预填支架号。现有下拉<b>原样保留</b></td>
+<td>新增为主、不改存量；两页有明确用途；下拉仍可快手输入；回退容易</td>
+<td>同一件事有两条入口（卡片 + 下拉），需要文案区分；导航从 3 个变 5 个</td>
+</tr>
+</tbody>
+</table>
+
+<blockquote>
+<b>推荐 C 的理由</b>：本项目现有下拉已经带拼音补全，熟练用户靠键盘更快；卡片页解决的是「不知道该选哪个、想看全貌」的场景。两者互补而非替代，且新增两个文件不触碰既有逻辑，出问题可单独摘掉。
+</blockquote>
+
+<h4>导航改造后</h4>
+<pre>按车型查 | 按支架查 | 品牌 | 型号 | 新增
+                      └─ 新增两个分段按钮，Ctrl+3 / Ctrl+4 快捷键</pre>
+
+<!-- ============ 4 ============ -->
+<h2 id="s4">4. 屏模拟</h2>
+<p class="muted">窗口按真实 1280×800 逻辑尺寸绘制后整体缩放 0.5 展示；内部配色取应用深色主题（<code>config.PALETTES["dark"]</code>），外壳是本设计稿的 slate 灰阶，两套配色不混用。示例数据取自参考图。</p>
+
+<h3 id="s40">4.0 可交互原型（可直接点）</h3>
+<div class="card">
+<b>这一屏是真的能操作的</b>：搜索框可以打字（试试 <code>ben</code>、<code>b</code>、<code>ao</code>），卡片可以点、有高亮和跳转提示，顶部「品牌」「型号」可以切换页面。数据是示例值，只用于感受交互（interaction），不连真实数据库。
+</div>
+
+<div class="mockrow">
+<div class="mockbox">
+  <div class="win" id="protoWin">
+    <div class="titlebar"><span class="t">后视镜支架查询 · 可交互原型</span><span class="btns"><span>—</span><span>□</span><span>×</span></span></div>
+    <div class="topbar">
+      <div class="gsearch">全局搜索（Ctrl+F）</div>
+      <div class="navs" id="protoNav">
+        <span class="nav">按车型查</span><span class="nav">按支架查</span>
+        <span class="nav on" data-p="brand">品牌</span><span class="nav" data-p="bracket">型号</span><span class="nav">新增</span>
+      </div>
+    </div>
+
+    <div class="page on" id="pgBrand">
+      <div class="filterbar">
+        <input class="fin" id="qBrand" placeholder="输入关键字…（支持拼音 / 首字母）" />
+        <div class="fhint" id="hBrand"></div>
+      </div>
+      <div class="pbody"><div class="scroll" id="gBrand"></div></div>
+    </div>
+
+    <div class="page" id="pgBracket">
+      <div class="filterbar">
+        <input class="fin" id="qBracket" placeholder="输入关键字…（如 3A、10）" />
+        <div class="fhint" id="hBracket"></div>
+      </div>
+      <div class="pbody"><div class="scroll" id="gBracket"></div></div>
+    </div>
+
+    <div class="status" id="protoStatus"><span>就绪</span><span>示例数据</span><span>主题：深色</span></div>
+    <div class="toast" id="protoToast"></div>
+  </div>
+  <div class="cap">交互原型：点顶部「品牌 / 型号」切页；搜索框实时过滤；点任一卡片高亮并弹出跳转提示（对应方案 C 的 <code>brand_chosen</code> / <code>bracket_chosen</code> 信号）。</div>
+</div>
+</div>
+
+
+<!-- 4.1 -->
+<h3 id="s41">4.1 品牌页 · 默认态（字母分组）</h3>
+<div class="mockrow">
+<div class="mockbox">
+  <div class="win">
+    <div class="titlebar"><span class="t">后视镜支架查询</span><span class="btns"><span>—</span><span>□</span><span>×</span></span></div>
+    <div class="topbar">
+      <div class="gsearch">全局搜索（Ctrl+F）</div>
+      <div class="navs">
+        <span class="nav">按车型查</span><span class="nav">按支架查</span>
+        <span class="nav on">品牌</span><span class="nav new">型号</span><span class="nav">新增</span>
+      </div>
+    </div>
+    <div class="filterbar">
+      <div class="fsearch">输入关键字…（支持拼音 / 首字母）</div>
+      <div class="fhint">共 269 个品牌 · 269 个有 logo</div>
+    </div>
+    <div class="pbody">
+      <div class="scroll">
+        <div class="grp"><span class="dot">▸</span><span class="lbl">字母</span><span class="ch">A</span></div>
+        <div class="pgrid">
+          <div class="pcard"><span class="logo">奥</span><span class="nm">奥迪</span><span class="meta">42 车型</span></div>
+          <div class="pcard"><span class="logo">阿</span><span class="nm">阿维塔</span><span class="meta">6 车型</span></div>
+          <div class="pcard"><span class="logo">安</span><span class="nm">安凯客车</span><span class="meta">3 车型</span></div>
+          <div class="pcard"><span class="logo">埃</span><span class="nm">埃安</span><span class="meta">18 车型</span></div>
+          <div class="pcard"><span class="logo">阿</span><span class="nm">阿尔法罗密欧</span><span class="meta">5 车型</span></div>
+        </div>
+        <div class="grp"><span class="dot">▸</span><span class="lbl">字母</span><span class="ch">B</span></div>
+        <div class="pgrid">
+          <div class="pcard hover"><span class="logo">奔</span><span class="nm">奔驰</span><span class="meta">128 车型</span></div>
+          <div class="pcard"><span class="logo">北</span><span class="nm">北汽昌河</span><span class="meta">9 车型</span></div>
+          <div class="pcard"><span class="logo">比</span><span class="nm">比亚迪</span><span class="meta">96 车型</span></div>
+          <div class="pcard"><span class="logo">别</span><span class="nm">别克</span><span class="meta">61 车型</span></div>
+          <div class="pcard"><span class="logo">奔</span><span class="nm">奔腾</span><span class="meta">14 车型</span></div>
+          <div class="pcard"><span class="logo">标</span><span class="nm">标致</span><span class="meta">22 车型</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="status"><span>就绪</span><span>数据：ky.db</span><span>主题：深色</span></div>
+  </div>
+  <div class="cap">默认态：按品牌名首字母分组，两列卡片行优先填充（左→右，再换行），第二行第二张展示悬停态描边。</div>
+</div>
+</div>
+
+<!-- 4.2 -->
+<h3 id="s42">4.2 品牌页 · 搜索态</h3>
+<div class="mockrow">
+<div class="mockbox">
+  <div class="win">
+    <div class="titlebar"><span class="t">后视镜支架查询</span><span class="btns"><span>—</span><span>□</span><span>×</span></span></div>
+    <div class="topbar">
+      <div class="gsearch">全局搜索（Ctrl+F）</div>
+      <div class="navs">
+        <span class="nav">按车型查</span><span class="nav">按支架查</span>
+        <span class="nav on">品牌</span><span class="nav new">型号</span><span class="nav">新增</span>
+      </div>
+    </div>
+    <div class="filterbar">
+      <div class="fsearch focus"><span class="cur">ben</span>　｜</div>
+      <div class="fhint">命中 3 个 · 回车选中第一个</div>
+    </div>
+    <div class="pbody">
+      <div class="scroll">
+        <div class="grp"><span class="dot">▸</span><span class="lbl">字母</span><span class="ch">B</span></div>
+        <div class="pgrid">
+          <div class="pcard sel"><span class="logo">奔</span><span class="nm">奔驰</span><span class="meta">精确</span></div>
+          <div class="pcard"><span class="logo">奔</span><span class="nm">奔腾</span><span class="meta">前缀</span></div>
+          <div class="pcard"><span class="logo">本</span><span class="nm">本田</span><span class="meta">子串</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="status"><span>筛选：ben</span><span>顺序：精确 → 前缀 → 子串</span></div>
+  </div>
+  <div class="cap">搜索态：输入 <code>ben</code> 命中「奔驰 / 奔腾 / 本田」，沿用 <code>search.filter_items</code> 的三段排序；分组头随结果动态出现，无结果的字母组自动收起。</div>
+</div>
+</div>
+
+<!-- 4.3 -->
+<h3 id="s43">4.3 品牌页 · 无 logo 兜底</h3>
+<div class="mockrow">
+<div class="mockbox">
+  <div class="win">
+    <div class="titlebar"><span class="t">后视镜支架查询</span><span class="btns"><span>—</span><span>□</span><span>×</span></span></div>
+    <div class="topbar">
+      <div class="gsearch">全局搜索（Ctrl+F）</div>
+      <div class="navs">
+        <span class="nav">按车型查</span><span class="nav">按支架查</span>
+        <span class="nav on">品牌</span><span class="nav new">型号</span><span class="nav">新增</span>
+      </div>
+    </div>
+    <div class="filterbar">
+      <div class="fsearch">输入关键字…（支持拼音 / 首字母）</div>
+      <div class="fhint">共 269 个品牌 · 3 个缺 logo</div>
+    </div>
+    <div class="pbody">
+      <div class="scroll">
+        <div class="grp"><span class="dot">▸</span><span class="lbl">字母</span><span class="ch">#</span></div>
+        <div class="pgrid">
+          <div class="pcard"><span class="bullet"></span><span class="nm">ARCFOX极狐</span><span class="meta">7 车型</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">212</span><span class="meta">2 车型</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">iCAR</span><span class="meta">4 车型</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="status"><span>就绪</span><span>共 269 个品牌</span></div>
+  </div>
+  <div class="cap">兜底态：以英文或数字开头的品牌归入「#」组，缺 logo 时用灰点占位（与参考图 2 的圆点视觉一致），不留空框。</div>
+</div>
+</div>
+
+<!-- 4.4 -->
+<h3 id="s44">4.4 型号页 · 默认态</h3>
+<div class="mockrow">
+<div class="mockbox">
+  <div class="win">
+    <div class="titlebar"><span class="t">后视镜支架查询</span><span class="btns"><span>—</span><span>□</span><span>×</span></span></div>
+    <div class="topbar">
+      <div class="gsearch">全局搜索（Ctrl+F）</div>
+      <div class="navs">
+        <span class="nav">按车型查</span><span class="nav">按支架查</span>
+        <span class="nav">品牌</span><span class="nav on">型号</span><span class="nav">新增</span>
+      </div>
+    </div>
+    <div class="filterbar">
+      <div class="fsearch">输入关键字…（如 3A、10）</div>
+      <div class="fhint">共 42 个型号</div>
+    </div>
+    <div class="pbody">
+      <div class="scroll">
+        <div class="grp"><span class="dot">▸</span><span class="lbl"></span><span class="ch" style="font-size:15px">所有型号</span></div>
+        <div class="pgrid">
+          <div class="pcard"><span class="bullet"></span><span class="nm">1号</span><span class="meta">128 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">2号</span><span class="meta">96 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">3A号</span><span class="meta">74 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">3B号</span><span class="meta">61 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">4号</span><span class="meta">55 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">5号</span><span class="meta">43 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">6号</span><span class="meta">38 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">7号</span><span class="meta">31 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">8号</span><span class="meta">27 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">9号</span><span class="meta">22 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">10号</span><span class="meta">19 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">11号</span><span class="meta">16 适配</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="status"><span>就绪</span><span>数据：ky.db</span></div>
+  </div>
+  <div class="cap">默认态：只有「所有型号」一个分组（与参考图 2 一致），型号按数值自然排序（1、2、3A、3B、4…，不是字符串序）。</div>
+</div>
+</div>
+
+<!-- 4.5 -->
+<h3 id="s45">4.5 型号页 · 搜索与空态</h3>
+<div class="mockrow">
+<div class="mockbox">
+  <div class="win">
+    <div class="titlebar"><span class="t">后视镜支架查询</span><span class="btns"><span>—</span><span>□</span><span>×</span></span></div>
+    <div class="topbar">
+      <div class="gsearch">全局搜索（Ctrl+F）</div>
+      <div class="navs">
+        <span class="nav">按车型查</span><span class="nav">按支架查</span>
+        <span class="nav">品牌</span><span class="nav on">型号</span><span class="nav">新增</span>
+      </div>
+    </div>
+    <div class="filterbar">
+      <div class="fsearch focus"><span class="cur">3</span>　｜</div>
+      <div class="fhint">命中 2 个</div>
+    </div>
+    <div class="pbody">
+      <div class="scroll">
+        <div class="grp"><span class="dot">▸</span><span class="lbl"></span><span class="ch" style="font-size:15px">所有型号</span></div>
+        <div class="pgrid">
+          <div class="pcard sel"><span class="bullet"></span><span class="nm">3A号</span><span class="meta">74 适配</span></div>
+          <div class="pcard"><span class="bullet"></span><span class="nm">3B号</span><span class="meta">61 适配</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="status"><span>筛选：3</span><span>点击卡片 → 跳到「按支架查」</span></div>
+  </div>
+  <div class="cap">搜索态 + 单卡片高亮：输入 <code>3</code> 命中 3A / 3B；点击任意卡片直接跳到「按支架查」并预填该型号。</div>
+</div>
+
+<div class="mockbox">
+  <div class="win">
+    <div class="titlebar"><span class="t">后视镜支架查询</span><span class="btns"><span>—</span><span>□</span><span>×</span></span></div>
+    <div class="topbar">
+      <div class="gsearch">全局搜索（Ctrl+F）</div>
+      <div class="navs">
+        <span class="nav">按车型查</span><span class="nav">按支架查</span>
+        <span class="nav">品牌</span><span class="nav on">型号</span><span class="nav">新增</span>
+      </div>
+    </div>
+    <div class="filterbar">
+      <div class="fsearch focus"><span class="cur">zzz</span>　｜</div>
+      <div class="fhint">命中 0 个</div>
+    </div>
+    <div class="pbody">
+      <div class="emptybox">
+        <div class="big">没有匹配的型号</div>
+        <div class="sm">换个关键字，或清空搜索框查看全部 42 个型号</div>
+      </div>
+    </div>
+    <div class="status"><span>筛选：zzz</span></div>
+  </div>
+  <div class="cap">空态：复用现有 <code>#emptyBox / #emptyTitle / #emptyText</code> 样式，不新造组件。</div>
+</div>
+</div>
+
+<!-- ============ 5 ============ -->
+<h2 id="s5">5. 逐区规范</h2>
+
+<h3 id="s51">5.1 过滤条（filter_bar）</h3>
+<table>
+<thead><tr><th style="width:150px">项</th><th style="width:130px">值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>高度</td><td>56px</td><td>沿用 <code>ui.Page</code> 固定值，两页一致</td></tr>
+<tr><td>左右内边距</td><td>16px</td><td>与现有查询页对齐</td></tr>
+<tr><td>搜索框尺寸</td><td>320 × 32</td><td>固定宽，避免拖动窗口时抖动</td></tr>
+<tr><td>搜索框字号</td><td>13px</td><td>占位文案 color <code>@faint</code></td></tr>
+<tr><td>右侧计数</td><td>12px</td><td>color <code>@faint</code>，靠右（<code>add_filter_stretch</code>）</td></tr>
+<tr><td>补全方式</td><td><code>ui.attach_completer</code></td><td>必须用它，原生 completer 不支持拼音</td></tr>
+</tbody>
+</table>
+
+<h3 id="s52">5.2 分组标题（QFrame#groupHead）</h3>
+<table>
+<thead><tr><th style="width:150px">项</th><th style="width:130px">值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>高度</td><td>38px（含 14px 上外边距）</td><td>分组之间留呼吸感</td></tr>
+<tr><td>左侧圆环</td><td>18 × 18，2px 描边</td><td>color <code>@accent</code>，内嵌 9px 三角/圆点</td></tr>
+<tr><td>「字母」小字</td><td>13px，<code>@faint</code></td><td>参考图同款</td></tr>
+<tr><td>字母本体</td><td>19px，<code>@accent</code>，600</td><td>「所有型号」组改用 15px 正文色</td></tr>
+<tr><td>下分割线</td><td>1px，<code>@border</code></td><td>贴底部，右延伸到内容区宽度</td></tr>
+</tbody>
+</table>
+
+<h3 id="s53">5.3 卡片（QFrame#pickCard）</h3>
+<table>
+<thead><tr><th style="width:150px">项</th><th style="width:150px">值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>尺寸</td><td>高度 64px，宽度自适应</td><td>两列由 <code>QGridLayout</code> 均分，列间距 16px、行间距 10px</td></tr>
+<tr><td>背景 / 描边</td><td><code>@card</code> / 1px <code>@border</code></td><td>圆角 4px，与 <code>#pickedBody</code> 同规格</td></tr>
+<tr><td>悬停</td><td>描边 <code>@accent</code>，底色提亮一档</td><td>QSS <code>:hover</code> 实现，无需手写事件</td></tr>
+<tr><td>选中</td><td>底色 <code>@sel_bg</code>，描边 <code>@accent</code></td><td>仅在「已选中返回」时短暂显示</td></tr>
+<tr><td>左内边距</td><td>14px</td><td>与右内边距对称</td></tr>
+<tr><td>logo 位</td><td>40 × 40</td><td><code>ui.fill_plate(label, logo_file, 40, 40)</code>，无图时灰底 + 圆点</td></tr>
+<tr><td>图标与文字间距</td><td>12px</td><td></td></tr>
+<tr><td>品牌名</td><td>14px，<code>@text</code></td><td>超长省略号（<code>QFontMetrics.elidedText</code>）</td></tr>
+<tr><td>右侧计数</td><td>11px，<code>@faint</code></td><td>「42 车型」/「128 适配」，右对齐</td></tr>
+<tr><td>型号页圆点</td><td>10 × 10</td><td>实心 <code>@faint</code>，左额外缩进 6px</td></tr>
+</tbody>
+</table>
+
+<h3 id="s54">5.4 页面级约束</h3>
+<table>
+<thead><tr><th style="width:150px">项</th><th style="width:150px">值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>内容区最大宽</td><td>1200px，居中</td><td>窗口超宽时卡片不无限拉长</td></tr>
+<tr><td>滚动区</td><td><code>QScrollArea</code> 无边框透明</td><td>复用 <code>theme.py:111-118</code> 已有规则</td></tr>
+<tr><td>列数</td><td>固定 2 列</td><td>与参考图一致；窗口 &lt; 900px 时可降为 1 列（可选）</td></tr>
+<tr><td>排序</td><td>品牌：首字母 → 拼音全拼<br>型号：数值自然序</td><td>型号必须自然排序，否则 10 会排在 2 前面</td></tr>
+<tr><td>总条数</td><td>品牌 269 / 型号 42</td><td>一次性全渲染，不做分页（数量级可接受）</td></tr>
+</tbody>
+</table>
+
+<!-- ============ 6 ============ -->
+<h2 id="s6">6. 与现状对照</h2>
+<table>
+<thead><tr><th style="width:170px">位置</th><th>改动前</th><th>改动后</th><th style="width:110px">是否动存量</th></tr></thead>
+<tbody>
+<tr><td>顶部导航</td><td>3 个分段按钮</td><td>5 个（加「品牌」「型号」）</td><td>改 <code>main.py</code></td></tr>
+<tr><td>按车型查 · 品牌</td><td><code>QComboBox</code></td><td>不变</td><td>否</td></tr>
+<tr><td>按支架查 · 支架号</td><td><code>QComboBox</code></td><td>不变</td><td>否</td></tr>
+<tr><td>品牌页</td><td>不存在</td><td>新增 <code>app/pages/brand_page.py</code></td><td>纯新增</td></tr>
+<tr><td>型号页</td><td>不存在</td><td>新增 <code>app/pages/bracket_pick_page.py</code></td><td>纯新增</td></tr>
+<tr><td>主题</td><td>无卡片/分组样式</td><td>新增 <code>#groupHead</code>、<code>#pickCard</code>、<code>#pickCard:hover</code>、<code>#pickCardSel</code></td><td>追加</td></tr>
+<tr><td>快捷键</td><td>Ctrl+1..3</td><td>Ctrl+1..5</td><td>改 <code>main.py</code></td></tr>
+</tbody>
+</table>
+
+<!-- ============ 7 ============ -->
+<h2 id="s7">7. 数据与性能</h2>
+
+<h4>7.1 数据来源（已存在，无需改库）</h4>
+<pre>brands(brand PRIMARY KEY, logo_url, logo_file, updated_at)     → 269 行
+models(brand, model, PRIMARY KEY(brand, model))
+brackets(bracket_id PRIMARY KEY, image_url, image_file, updated_at)
+fitments(... brand, model, years_raw ...)</pre>
+<ul>
+<li><code>db.brands()</code> 已返回 <code>brand / logo_file / model_count</code>，品牌页直接可用。</li>
+<li><code>db.brackets()</code> 已返回 <code>bracket_id / image_file / fitment_count</code>，型号页直接可用。</li>
+<li>logo 文件名形如 <code>brand_奥迪.jpg</code>，路径由 <code>config.image_path()</code> 拼出。</li>
+</ul>
+
+<h4>7.2 分组规则</h4>
+<pre>initials = search.keys(brand)[1]        # 全拼 + 首字母，见 search.py:44
+group    = initials[:1].upper() if initials else "#"
+if not ("A" &lt;= group &lt;= "Z"): group = "#"</pre>
+<ul>
+<li>中文品牌 → 拼音首字母分组；英文/数字开头（ARCFOX极狐、212、iCAR）→ 归「#」组放最前或最后。</li>
+<li><code>pypinyin</code> 缺失时 <code>search.keys</code> 会降级为字面匹配，此时全部归「#」组，分组消失但不报错。</li>
+</ul>
+
+<h4>7.3 性能</h4>
+<table>
+<thead><tr><th style="width:170px">关注点</th><th>结论</th></tr></thead>
+<tbody>
+<tr><td>269 张 logo 同时加载</td><td>不能一次性全读。卡片用 <code>ui.fill_plate(label, file, 40, 40)</code>，即按需 40×40 缩放，<b>且走 <code>thumbs.pixmap</code> 内存缓存</b>；首屏只加载可见的十几张</td></tr>
+<tr><td>首字母计算</td><td><code>search._CHAR_CACHE</code> 已有进程内缓存，269 个品牌只算一次</td></tr>
+<tr><td>搜索响应</td><td><code>search.filter_items</code> 纯 Python 子串匹配，269 条可忽略；沿用现有 <code>QTimer</code> 防抖（若有）</td></tr>
+<tr><td>滚动卡顿</td><td>269 个 QFrame 一次性建会慢（约 200~400ms）。可选优化：分组懒加载，或只对可见区建卡（先不做，实测再定）</td></tr>
+</tbody>
+</table>
+
+<!-- ============ 8 ============ -->
+<h2 id="s8">8. 代码落点</h2>
+
+<h4>8.1 新增文件</h4>
+<table>
+<thead><tr><th style="width:230px">文件</th><th>职责</th></tr></thead>
+<tbody>
+<tr><td><code>app/pages/brand_page.py</code></td><td><code>BrandPickerPage(ui.Page)</code>：搜索框 + 分组滚动网格 + 空态；信号 <code>brand_chosen(str)</code></td></tr>
+<tr><td><code>app/pages/bracket_pick_page.py</code></td><td><code>BracketPickerPage(ui.Page)</code>：搜索框 + 单分组网格 + 空态；信号 <code>bracket_chosen(str)</code></td></tr>
+<tr><td><code>app/ui.py</code> 追加</td><td><code>class PickCard(QFrame)</code>（一个卡片）、<code>class PickGrid(QScrollArea)</code>（分组 + 两列网格容器）</td></tr>
+</tbody>
+</table>
+
+<h4>8.2 改动文件（少量）</h4>
+<table>
+<thead><tr><th style="width:170px">文件</th><th>改动</th></tr></thead>
+<tbody>
+<tr><td><code>app/main.py</code></td><td><code>VIEW_LABELS</code> 加两项；<code>_build_pages</code> 挂两页；<code>_connect_pages</code> 连两个信号；<code>_build_shortcuts</code> 补 Ctrl+3/4</td></tr>
+<tr><td><code>app/theme.py</code></td><td>追加 <code>#groupHead</code> / <code>#groupDot</code> / <code>#groupLetter</code> / <code>#pickCard</code> / <code>#pickCard:hover</code> / <code>#pickCardSel</code> / <code>#pickLogo</code></td></tr>
+<tr><td><code>app/db.py</code></td><td>大概率不用改；若 <code>brands()</code> 未返回 <code>logo_file</code> 则补字段</td></tr>
+</tbody>
+</table>
+
+<h4>8.3 跳转逻辑（方案 C）</h4>
+<pre>品牌页点「奔驰」
+  → emit brand_chosen("奔驰")
+  → MainWindow: model_page.set_brand("奔驰")   # 预填下拉 + 自动 _reload_models()
+  → set_view(0)                                # 切到「按车型查」
+
+型号页点「3A号」
+  → emit bracket_chosen("3A")
+  → MainWindow: bracket_page.set_bracket("3A") # 预填下拉 + 触发查询
+  → set_view(1)                                # 切到「按支架查」</pre>
+
+<!-- ============ 9 ============ -->
+<h2 id="s9">9. 待拍板事项</h2>
+
+<table>
+<thead><tr><th style="width:40px">#</th><th style="width:280px">决策点</th><th>候选与我的建议</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>接入方式</td><td>A 纯浏览 / B 改造下拉 / <b>C 独立页 + 跳转（建议）</b></td></tr>
+<tr><td>2</td><td>导航文案</td><td>「品牌」「型号」（建议，短）／「全部品牌」「全部型号」（更明确但占宽）</td></tr>
+<tr><td>3</td><td>卡片右侧是否显示计数</td><td>显示「42 车型」「128 适配」（建议，信息有用）／不显示（更贴近参考图）</td></tr>
+<tr><td>4</td><td>型号页排序</td><td>数值自然序（建议）／按适配数降序</td></tr>
+<tr><td>5</td><td>窗口 &lt; 900px 时</td><td>降为 1 列（建议）／仍强行 2 列（会挤）</td></tr>
+<tr><td>6</td><td>品牌页字母索引条</td><td>右侧加 A–Z 快速跳转（参考图没有，可后续加）</td></tr>
+</tbody>
+</table>
+
+<blockquote>
+本文档只是设计稿，<b>尚未修改任何代码、未提交、未重新构建</b>。拍板后我再按 C 方案落地，落地完会跑一次 <code>tmp_check_*</code> 自检并重新打包。
+</blockquote>
+
+</div>
+
+<div id="toc">
+<h4>目录</h4>
+<a href="#s1">1. 需求与参考图对应</a>
+<a href="#s2">2. 现状与差距</a>
+<a href="#s3">3. 接入方案对比</a>
+<a href="#s4">4. 屏模拟</a>
+<a href="#s40" style="padding-left:18px">4.0 可交互原型</a>
+<a href="#s41" style="padding-left:18px">4.1 品牌页 · 默认态</a>
+<a href="#s42" style="padding-left:18px">4.2 品牌页 · 搜索态</a>
+<a href="#s43" style="padding-left:18px">4.3 品牌页 · 无 logo</a>
+<a href="#s44" style="padding-left:18px">4.4 型号页 · 默认态</a>
+<a href="#s45" style="padding-left:18px">4.5 型号页 · 搜索/空态</a>
+<a href="#s5">5. 逐区规范</a>
+<a href="#s51" style="padding-left:18px">5.1 过滤条</a>
+<a href="#s52" style="padding-left:18px">5.2 分组标题</a>
+<a href="#s53" style="padding-left:18px">5.3 卡片</a>
+<a href="#s54" style="padding-left:18px">5.4 页面级约束</a>
+<a href="#s6">6. 与现状对照</a>
+<a href="#s7">7. 数据与性能</a>
+<a href="#s8">8. 代码落点</a>
+<a href="#s9">9. 待拍板事项</a>
+</div>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  function update(){
+    var best = 0, bestTop = -1e9;
+    targets.forEach(function(el, i){
+      if(!el) return;
+      var top = el.getBoundingClientRect().top;
+      if(top < 120 && top > bestTop){ bestTop = top; best = i; }
+    });
+    links.forEach(function(a, i){ a.classList.toggle('active', i === best); });
+  }
+  window.addEventListener('scroll', update, {passive:true});
+  update();
+})();
+</script>
+
+<script>
+/* 可交互原型：仅用于感受交互，数据是示例值 */
+(function(){
+  var BRANDS = [
+    ['奥迪','aodi','42'],['阿维塔','aweta','6'],['安凯客车','ankaikeche','3'],['埃安','aian','18'],['阿尔法罗密欧','aerfaluomiou','5'],
+    ['奔驰','benchi','128'],['北汽昌河','beiqichanghe','9'],['比亚迪','biyadi','96'],['别克','bieke','61'],['宝马','baoma','73'],
+    ['奔腾','benteng','14'],['标致','biaozhi','22'],['北京越野','beijingyueye','11'],['保时捷','baoshijie','31'],['宾利','binli','8'],['本田','bentian','88'],
+    ['长安','changan','64'],['长城','changcheng','47'],['传祺','chuanqi','26'],
+    ['大众','dazhong','132'],['东风','dongfeng','58'],['东风小康','dongfengxiaokang','12'],
+    ['丰田','fengtian','96'],['福特','fute','52'],['法拉利','falali','6'],
+    ['广汽传祺','guangqichuanqi','24'],['观致','guanzhi','5'],
+    ['哈弗','hafu','38'],['红旗','hongqi','29'],['海马','haima','9'],
+    ['吉利','jili','58'],['江淮','jianghuai','21'],['捷豹','jiebao','12'],
+    ['凯迪拉克','kaidilake','26'],['克莱斯勒','kelaisile','7'],
+    ['雷克萨斯','leikesasi','33'],['领克','lingke','19'],['路虎','luhu','16'],
+    ['马自达','mazida','28'],['名爵','mingjue','23'],['MINI','mini','14'],
+    ['哪吒','nezha','9'],
+    ['欧拉','oula','7'],
+    ['奇瑞','qirui','41'],['起亚','qiya','30'],
+    ['荣威','rongwei','25'],['日产','richan','37'],
+    ['三菱','sanling','18'],['上汽大通','shangqidatong','15'],['斯柯达','sikeda','17'],
+    ['特斯拉','tesila','9'],['坦克','tanke','6'],
+    ['五菱','wuling','33'],['蔚来','weilai','12'],['沃尔沃','woerwo','24'],
+    ['小鹏','xiaopeng','10'],['现代','xiandai','39'],['雪佛兰','xuefolan','27'],
+    ['一汽','yiqi','36'],['依维柯','yiweike','8'],['英菲尼迪','yingfeinidi','13'],
+    ['众泰','zhongtai','6'],['中华','zhonghua','11'],
+    ['ARCFOX极狐','arcfox','7'],['212','212','2'],['iCAR','icar','4']
+  ];
+  var BRACKETS = [
+    ['1号','1','128'],['2号','2','96'],['3A号','3a','74'],['3B号','3b','61'],['4号','4','55'],
+    ['5号','5','43'],['6号','6','38'],['7号','7','31'],['8号','8','27'],['9号','9','22'],
+    ['10号','10','19'],['11号','11','16'],['12号','12','13'],['13号','13','11'],
+    ['14号','14','9'],['15号','15','7'],['16A号','16a','6'],['16B号','16b','5']
+  ];
+
+  var win = document.getElementById('protoWin');
+  if(!win) return;
+  var pgBrand = document.getElementById('pgBrand');
+  var pgBracket = document.getElementById('pgBracket');
+  var gBrand = document.getElementById('gBrand');
+  var gBracket = document.getElementById('gBracket');
+  var qBrand = document.getElementById('qBrand');
+  var qBracket = document.getElementById('qBracket');
+  var hBrand = document.getElementById('hBrand');
+  var hBracket = document.getElementById('hBracket');
+  var protoStatus = document.getElementById('protoStatus');
+  var protoToast = document.getElementById('protoToast');
+  var toastTimer = null;
+
+  function groupOf(name, py){
+    var first = String(name || '').charAt(0);
+    if(!/[\u4e00-\u9fa5]/.test(first)) return '#';   // 英文/数字开头归「#」组
+    var c = String(py || '').charAt(0).toUpperCase();
+    return (c >= 'A' && c <= 'Z') ? c : '#';
+  }
+  function showToast(msg){
+    protoToast.textContent = msg;
+    protoToast.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ protoToast.classList.remove('on'); }, 2400);
+  }
+  function setStatus(nm, kind){
+    protoStatus.innerHTML = '<span>已选：' + nm + '</span><span>目标页：'
+      + (kind === 'brand' ? '按车型查' : '按支架查') + '</span><span>示例数据</span>';
+  }
+
+  function renderBrands(){
+    var q = (qBrand.value || '').trim().toLowerCase();
+    var hit = BRANDS.filter(function(it){
+      if(!q) return true;
+      return it[0].toLowerCase().indexOf(q) >= 0 || it[1].indexOf(q) >= 0;
+    });
+    var groups = {}, order = [];
+    hit.forEach(function(it){
+      var g = groupOf(it[0], it[1]);
+      if(!groups[g]){ groups[g] = []; order.push(g); }
+      groups[g].push(it);
+    });
+    order.sort(function(a,b){ if(a === '#') return 1; if(b === '#') return -1; return a < b ? -1 : (a > b ? 1 : 0); });
+    var html = '';
+    order.forEach(function(g){
+      html += '<div class="grp"><span class="dot">▸</span><span class="lbl">'
+        + (g === '#' ? '其他' : '字母') + '</span><span class="ch">' + g + '</span></div>';
+      html += '<div class="pgrid">';
+      groups[g].forEach(function(it){
+        html += '<div class="pcard" data-nm="' + it[0] + '"><span class="logo">'
+          + it[0].charAt(0) + '</span><span class="nm">' + it[0] + '</span><span class="meta">'
+          + it[2] + ' 车型</span></div>';
+      });
+      html += '</div>';
+    });
+    if(!html){
+      html = '<div class="emptybox"><div class="big">没有匹配的品牌</div>'
+        + '<div class="sm">换个关键字试试，或清空搜索框查看全部</div></div>';
+    }
+    gBrand.innerHTML = html;
+    hBrand.textContent = q ? ('命中 ' + hit.length + ' 个') : ('共 ' + BRANDS.length + ' 个品牌 · 示例数据');
+  }
+
+  function renderBrackets(){
+    var q = (qBracket.value || '').trim().toLowerCase();
+    var hit = BRACKETS.filter(function(it){
+      if(!q) return true;
+      return it[0].toLowerCase().indexOf(q) >= 0 || it[1].indexOf(q) >= 0;
+    });
+    var html = '';
+    if(hit.length){
+      html += '<div class="grp"><span class="dot">▸</span>'
+        + '<span class="ch" style="font-size:15px">所有型号</span></div><div class="pgrid">';
+      hit.forEach(function(it){
+        html += '<div class="pcard" data-nm="' + it[0] + '"><span class="bullet"></span><span class="nm">'
+          + it[0] + '</span><span class="meta">' + it[2] + ' 适配</span></div>';
+      });
+      html += '</div>';
+    } else {
+      html = '<div class="emptybox"><div class="big">没有匹配的型号</div>'
+        + '<div class="sm">换个关键字，或清空搜索框查看全部</div></div>';
+    }
+    gBracket.innerHTML = html;
+    hBracket.textContent = q ? ('命中 ' + hit.length + ' 个') : ('共 ' + BRACKETS.length + ' 个型号 · 示例数据');
+  }
+
+  function bindPick(container, kind){
+    container.addEventListener('click', function(e){
+      var card = e.target.closest ? e.target.closest('.pcard') : null;
+      if(!card) return;
+      Array.prototype.forEach.call(container.querySelectorAll('.pcard'), function(c){
+        c.classList.remove('sel');
+      });
+      card.classList.add('sel');
+      var nm = card.getAttribute('data-nm');
+      showToast(kind === 'brand'
+        ? ('已选「' + nm + '」→ 跳转「按车型查」并预填')
+        : ('已选「' + nm + '」→ 跳转「按支架查」并预填'));
+      setStatus(nm, kind);
+    });
+  }
+
+  bindPick(gBrand, 'brand');
+  bindPick(gBracket, 'bracket');
+  qBrand.addEventListener('input', renderBrands);
+  qBracket.addEventListener('input', renderBrackets);
+
+  var navs = document.querySelectorAll('#protoNav .nav[data-p]');
+  Array.prototype.forEach.call(navs, function(n){
+    n.addEventListener('click', function(){
+      var p = n.getAttribute('data-p');
+      Array.prototype.forEach.call(navs, function(x){ x.classList.toggle('on', x === n); });
+      pgBrand.classList.toggle('on', p === 'brand');
+      pgBracket.classList.toggle('on', p === 'bracket');
+      protoStatus.innerHTML = '<span>就绪</span><span>示例数据</span><span>主题：深色</span>';
+    });
+  });
+
+  renderBrands();
+  renderBrackets();
+})();
+</script>
+</body>
+</html>

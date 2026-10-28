@@ -1,0 +1,990 @@
+2026-10-26 工作日志 —— motorcycle / 界面重设计（仅设计稿，未改应用代码）
+
+================================================================================
+一、背景与需求（Background / Requirement）
+================================================================================
+用户反馈「页面设计的太丑了，重新设计几版我看看」。
+结合现状截图 logs/ui_running_window.png 与 app/ 下的 QSS/页面代码先做诊断，
+再按约定（设计页面必须产出 HTML 可视化稿）输出三版布局方案供选择。
+
+================================================================================
+二、新增文件（New Files）
+================================================================================
+docs/界面重设计三方案.html    界面重设计三方案布局稿 v1.0
+  - 三版骨架：A 左列表+右详情（master-detail）、B 图卡网格（gallery/card grid）、
+    C 数据台表格（data desk，含空态 empty state）
+  - 每个示意窗口 1:1 逻辑尺寸 1280×800，页内 zoom 0.84 展示
+  - 数据全部取自 ky.db 真实记录：
+      奥迪 Q5 → 23 条 / 4 个支架（A 13 + B 10）
+      奥迪 → 206 条 / 7 个支架（141:70, 10:50, 22:44, 3A:21, 98:15, 55:4, 183:2）
+      支架 141 → 104 条 / 5 个品牌（其中 A 路 72 条）
+  - 图片直接引用 scraper/data/images/bracket_*.jpg|png（真实支架大图）
+  - 含：现状诊断 7 条 + 共用修正项 5 条、逐区规范表、三版对照矩阵、
+    实现影响面（文件级改动量）、技术约束、建议与 3 个待拍板问题
+
+================================================================================
+三、现状诊断结论（Diagnosis，写入设计稿第 1 节）
+================================================================================
+D1 层级扁平：标题 14 / 正文 12 / 提示 11，三档只差 1px，全篇同亮度 → 无视觉落点
+D2 四层横带：工具栏 40 + Tab 36 + 页标题 30 + 筛选行 34 ≈ 140px，占掉 26% 高度
+D3 卡片与表格重复展示同一批记录（ui.CardStrip + 明细表）
+D4 列宽失衡：「年款（原文）」320px 过宽、「车型」吃掉全部剩余宽度
+D5 来源 A/B 是内部抓取路线概念，却占一整列
+D6 支架图为白底产品图，直接贴在 #1f1f1f 深底上成白块
+D7 无空态、状态栏 6 个统计数字同权重
+
+共用修正：字号基准 12→13、标题 18~20、数字等宽 15~24；四层横带压成两层
+（Tab 改分段控件）；图片统一装浅色底板 #ececec；来源降级为 6px 圆点；
+卡片条与表格二者只留一个。
+
+================================================================================
+四、实现影响面（Impact，仅评估未执行）
+================================================================================
+A 主从：ui.py 重写 Page 骨架 + model_page.py 重写 + theme.py +60 行，
+         main.py Tab→QStackedWidget；约 380 行 / 4 文件；风险中
+B 图卡：新增卡片网格组件（QListView IconMode + 自定义 delegate 或 FlowLayout），
+         约 460 行 / 5 文件；风险高（delegate 绘制 + 图片解码性能）
+C 数据台：models.py 列定义 + theme.py +40 行 + ui.py 表头/空态，
+         约 240 行 / 3 文件；风险低
+三版均不改 app/db.py（Repository 只读接口、SQL 不动）。
+
+================================================================================
+五、验证（Verification）
+================================================================================
+渲染自检：Edge headless（--headless=new --window-size=1180,7600）整页截图，
+  再用 System.Drawing 裁剪分段核对。修掉两处渲染缺陷：
+  R1 .kv span 选择器误命中键值里的圆点（宽度被拉成 74px 的横线）→ 改 .kv > span
+  R2 方案 A 右详情下方明细表未撑满 → .dtable 改 flex:1 + 行 flex:1
+  R3 方案 C 来源列圆点与字母粘连 → .ctable .dot 加 margin-right 5px
+截图核对结果：三版窗口均无溢出、无截断，A 的明细表正好填到底部状态栏，
+  C 的 16 行表格正好填满内容区。
+
+================================================================================
+六、实现：A+C 混合布局落地（Implementation，用户 2026-10-26 确认执行）
+================================================================================
+6.1 回滚备份（无 git，必须先做）
+  app_backup_20261026/  ← 改动前 app/ 全部 .py 快照（9 个文件 + pages/3 个）
+  还原方式：删除 app/ 下改动文件，从备份目录拷回即可。
+
+6.2 改动文件（7 个，其中新增 2 个）
+  app/config.py        +8 行   两套调色板各加 chip_bg / chip_line / plate / sel_bg
+  app/theme.py         重写    13px 基准 + 新增 topBar/filterBar/seg/listRow/
+                                chip/photoPlate/detailNum/kvLabel/empty 等样式
+  app/delegates.py     新增    ChipDelegate（圆角胶囊）+ DotDelegate（来源圆点）
+  app/ui.py            重写    BracketRow / ResultList / DetailPane / Page 骨架
+  app/pages/model_page.py   重写  左列表 + 右详情 + 分组聚合 + 复制/反查
+  app/pages/bracket_page.py 改写  图版左栏 + C 风格明细表 + 复制
+  app/main.py          重写    QTabWidget → 分段控件 + QStackedWidget，
+                               顶栏 QFrame(52)、状态栏瘦身、Ctrl+F / Ctrl+1 / Ctrl+2
+  未改：app/db.py（只读接口、SQL 零改动）、app/models.py（无需改动，与计划差 25 行
+        的原因：区间格式化下沉到 model_page.year_range()，模型层保持通用）
+
+6.3 关键实现点
+  - 分段控件：QPushButton(checkable) + QButtonGroup(exclusive)，QSS #seg:checked
+  - 主从布局：ResultList 定宽 420（行高 66 / 缩略图 44）+ DetailPane 自适应
+  - 图版（photo plate）：所有支架图装进 #ececec 浅底 + 4px 圆角，白底图不再裸贴深底
+  - 明细表：行高 38、表头 11px、无网格线、年款区间用 ChipDelegate、来源用 DotDelegate
+  - 键盘：列表 ↑↓ 切支架（QShortcut + WidgetWithChildrenShortcut）、Ctrl+F 聚焦搜索
+  - 主题切换：delegates 每次 paint 现读 config.C，切主题后 page.refresh_theme() 刷新视口
+
+6.4 验证中发现的缺陷（已修）
+  V1 RuntimeError: Internal C++ object (QRect) already deleted
+     根因：delegates._draw_base 返回 opt.rect，QStyleOptionViewItem 出栈后 rect 包装失效
+     修复：return QRect(opt.rect) 显式拷贝
+  V2 详情/左栏按钮被拉满整行宽（QHBoxLayout/QVBoxLayout 默认拉伸）
+     修复：actions.addStretch(1)；左侧按钮 addWidget(..., AlignLeft)
+  V3 空态提示贴在列表顶部/底部而非居中
+     修复：空态独立 empty_wrap（上下 stretch 包裹），有结果时隐藏 scroll、显示 wrap
+
+================================================================================
+七、验证结果（Verification）
+================================================================================
+python -m compileall app          → 通过，无语法错误
+read_lints(app)                   → 0 诊断
+真机抓图（.venv\Scripts\python.exe app\tmp_grab.py，QWidget.grab()）：
+  logs/ui_redesign_q1.png        奥迪 Q5：23 条 / 4 支架，左列表 4 行，详情 9 条明细
+  logs/ui_redesign_q1_all.png    奥迪全品牌：206 条 / 7 支架，左列表 7 行铺满
+  logs/ui_redesign_q2.png        支架 141：72 条适配 / 5 品牌，chip + 圆点正常
+  logs/ui_redesign_q2_light.png  浅色主题：chip/图版/圆点对比正常，无「瞎色」
+  logs/ui_redesign_empty.png     空态：左栏与右栏提示均居中
+真实启动：Start-Process .venv\Scripts\python.exe main.py（工作目录 app）
+  PID 24344，窗口标题「KY 支架查询 · 康业后视镜支架适配库」，Responding=True
+临时脚本 tmp_grab.py / tmp_backup.ps1 / tmp_check.ps1 已删除（截图保留作证据）
+
+================================================================================
+八、状态与遗留（Status / TODO）
+================================================================================
+状态：A+C 布局已落地并真机验证通过；未提交（项目非 git 仓库）、未打包 exe。
+遗留 / 待确认：
+  1. 来源 A/B 目前为「圆点 + A/B 字母」，未加 tooltip（QSS 无 tooltip 样式，
+     如需可加 setToolTip 一行）
+  2. 详情表「年款原文」在窄窗口会被省略号截断，未接 tooltip
+  3. 导出 Excel、增量更新提示仍是旧待办，本次未动
+  4. 若不喜欢可随时回滚：app_backup_20261026/ 覆盖回 app/ 即恢复旧界面
+
+================================================================================
+九、界面文案去公司信息（Copy Revision，用户 2026-10-26 提出）
+================================================================================
+背景：用户指出顶栏/窗口标题带了公司信息，要求去掉。
+改动 3 处（界面可见文案，无逻辑改动）：
+  app/config.py
+    APP_NAME      "KY 支架查询"                → "后视镜支架查询"
+    APP_SUBTITLE  "康业后视镜支架适配库"       → "车型 / 支架 双向反查"
+    （APP_NAME/APP_SUBTITLE 同时用于窗口标题与顶栏两处，改一处即两处生效）
+  app/pages/model_page.py
+    详情副标题    "后视镜支架 · 康业科技"      → "后视镜支架"
+保留未动：
+  app/main.py / tmp_theme_check.py 的 setOrganizationName("KY")
+    —— 属 QSettings 注册表键名，不显示在界面上；改动会导致已保存的主题偏好丢失
+  db.py 的 ky.db 文件名、模块 docstring —— 非界面文案
+验证：
+  Select-String 全仓 app/*.py 搜「康业」→ 0 命中
+  重启应用：PID 1888，窗口标题「后视镜支架查询 · 车型 / 支架 双向反查」，Responding=True
+  抓图 logs/ui_copy_check.png 确认顶栏、详情副标题均无公司信息
+
+================================================================================
+十、明细表新增「品牌」列 + 全局补 tooltip（用户 2026-10-26 提出）
+================================================================================
+背景：用户要求「品牌名也应该加到列表里」——按车型查的明细表原先只有
+车型 / 年款区间 / 年款原文 / 来源，缺品牌列；按支架查的表已有品牌列。
+
+改动：
+  app/ui.py  DetailPane.COLUMNS
+      新增 ("brand", "品牌", 110)，车型列 200 → 190
+      delegate 列序号随之右移：chips=(1,)→(2,)、dots=(3,)→(4,)
+  app/pages/model_page.py  run_query()
+      row.setdefault("brand", brand)
+      原因：db.model_brackets() 的 SELECT 不含 brand（品牌是查询条件），
+            页面层补一次即可，不动 SQL、不动只读接口
+  app/models.py  data()
+      新增 ToolTipRole 返回该格全文
+      原因：新增品牌列后「年款原文」列更易被省略号截断，悬停需能看全文
+      （这也一并补上了此前遗留的「年款原文截断无 tooltip」）
+
+验证：
+  python -m compileall app → 通过
+  抓图 logs/ui_brand_column.png：明细表依次为 品牌 / 车型 / 年款区间(chip) /
+    年款原文 / 来源(圆点)，品牌列显示「奥迪」，与按支架查的表保持一致
+  重启应用：PID 26504，标题「后视镜支架查询 · 车型 / 支架 双向反查」，
+    Responding=True
+
+注意（设计取舍，待用户确认）：
+  按车型查的品牌是查询条件，整列取值相同（都是「奥迪」），信息量有限；
+  若觉得冗余，可改回不显示，或改为「仅当结果含多个品牌时才显示该列」。
+
+================================================================================
+十一、拼音 / 首字母搜索（Pinyin Search，用户 2026-10-26 确认：不要声调、不要只匹配开头）
+================================================================================
+11.1 需求
+  所有搜索框支持「中文 / 全拼 / 首字母 / 中英混输」，不支持声调输入，
+  不允许只匹配开头（必须支持子串匹配）。
+
+11.2 依赖决策（用户确认方案 A）
+  新增依赖 pypinyin==0.55.0，装入 .venv（阿里云镜像），并新建 requirements.txt
+  锁定 PySide6-Essentials==6.12.0 + pypinyin==0.55.0
+  选 A 的理由：只有实时转拼音才能跟上 DB 更新；库纯 Python，无 C 扩展
+
+11.3 新增文件
+  app/search.py     拼音匹配核心（约 110 行）
+    keys(text)        生成两把键：全拼+字母数字、首字母+字母数字
+                      奥迪Q5 -> ("aodiq5", "adq5")
+    matches()         查询是原始文本/全拼/首字母 任一「子串」即命中
+    filter_items()    排序：完全相等 → 前缀 → 子串，其余保持原序
+    字符级 + 字符串级双层缓存（_CHAR_CACHE / _KEYS_CACHE）
+    无 pypinyin 时自动降级为字面匹配（app 不会因缺库崩）
+  requirements.txt  依赖清单（此前项目没有）
+
+11.4 接入点（5 个输入框）
+  顶栏全局搜索   main.do_search 改为内存索引（支架号 300 + 车型 1479 + 品牌 269），
+                 不再走 repo.global_search 的 SQL LIKE；优先级 支架→车型→品牌
+  品牌框(Q1)     ui.attach_completer：textEdited 时用 filter_items 重建 QStringListModel
+  车型框(Q1)     同上（provider 实时读 combo 当前 items，切品牌后自动跟随）
+  支架号框(Q2)   同上（含「254B款」这类中文 id 也可拼音搜）
+  品牌框(Q2)     由不可编辑改为可编辑 + 拼音补全
+  Q2 的触发时机由 currentTextChanged（每敲一个字就查库）改为 activated +
+  returnPressed（回车/选中才查询），避免输入过程中反复重建表格
+
+11.5 验证（临时脚本，验完已删）
+  键生成：奥迪Q5 → (aodiq5, adq5)；一汽奥迪Q5L sportback → (yiqiaodiq5lsportback,
+          yqadq5lsportback)；保时捷 → (baoshijie, bsj)          全部 OK
+  匹配 16 例全通过（含大写 AODI、带空格 "ao di"、子串 "q5l"、"yqad"）：
+          ad / aodi / AODI / "ao di" / bsj / q5 / adq5 / aodiq5 / 奥迪 → True
+          zzz / motuo → False
+  补全实测：品牌框 ad→3 项[奥迪,比亚迪,玛莎拉蒂]、aodi→[奥迪]、bsj→[保时捷]
+          车型框 adq5→3 项、q5l→1 项；支架-品牌 bsj→[保时捷]；支架号 141→[141]
+  端到端：全局搜索输入 bsj → 跳品牌 保时捷；输入 adq5 → 品牌 奥迪 / 车型 奥迪Q5（进口）
+          截图 logs/ui_pinyin_search.png（6 条 / 3 支架，品牌列正常）
+  重启应用：PID 26568，标题「后视镜支架查询 · 车型 / 支架 双向反查」，Responding=True
+
+11.6 性能与风险
+  首次搜索要为 1479 个车型生成键，实测远低于 100ms（字符级缓存命中率高）
+  多音字走 pypinyin 默认读音，品牌表如需纠正可加人工覆盖字典（预留接口）
+  回滚：删 app/search.py + 4 个文件从 app_backup_20261026/ 还原；pypinyin 留着不影响
+
+================================================================================
+十二、缺陷修复：拼音补全弹窗不出现（用户反馈「没用」）
+================================================================================
+12.1 现象
+  用户反馈拼音搜索「没用」，界面上敲拼音什么也不弹。
+
+12.2 复现（QTest.keyClicks 真实按键，非 setText）
+  修复前：
+    品牌框   typed='ad'  popup_visible=False  completionCount=0  model=['奥迪','比亚迪','玛莎拉蒂']
+    车型框   typed='q5l' popup_visible=False  completionCount=0
+    支架号框 typed='141' popup_visible=True   completionCount=1
+
+12.3 根因（QCompleter 二次过滤）
+  我们已经在 refresh() 里用拼音把候选过滤好并 setModel()，
+  但 QCompleter 默认 PopupCompletion 模式下，QComboBox/QLineEdit 内部
+  还会用「用户键入的原始文本」当 completionPrefix 再过滤一次：
+  "ad" 对 ['奥迪','比亚迪','玛莎拉蒂'] 无一包含 → 结果 0 条 → 弹窗不显示。
+  「141」能弹是因为字面包含，掩盖了这个 bug（说明只测字面输入会漏）。
+
+12.4 修复
+  app/ui.py  attach_completer()
+    1) CompletionMode 改为 UnfilteredPopupCompletion —— 弹窗内容完全由我们的
+       拼音过滤结果决定，Qt 不再二次过滤（这是本次根因的正面修复）
+    2) 函数改为同时支持 QComboBox 与 QLineEdit（用 __init__ 里的 edit_of 判断），
+       并新增 on_pick 回调
+  app/main.py
+    顶栏全局搜索框也挂上补全（候选 = 支架号 + 车型 + 品牌，限 12 条），
+    选中候选即执行搜索（pick_suggestion → do_search）
+  app/ui.py  Page.make_table()
+    DictTableModel 改为 parent=view，避免进程退出阶段被 Python 提前回收
+    （复现脚本收尾时报过 "Internal C++ object (DictTableModel) already deleted"）
+
+12.5 复验（修复后同脚本）
+  顶栏搜索 bsj    visible=True rows=1  ['保时捷']
+  顶栏搜索 adq5   visible=True rows=3  ['奥迪Q5（进口）','一汽奥迪Q5','一汽奥迪Q5L sportback']
+  品牌框   ad     visible=True rows=3  ['奥迪','比亚迪','玛莎拉蒂']
+  品牌框   aodi   visible=True rows=1  ['奥迪']
+  车型框   adq5   visible=True rows=3
+  支架-品牌 bsj   visible=True rows=1  ['保时捷']
+  支架号框 141    visible=True rows=1  ['141']
+  无异常输出；重启应用 PID 22864，Responding=True
+
+
+
+
+
+=== 追加：录入页设计稿 v3（年款改为逐条）==
+时间：2026-10-26
+文件：docs/新增录入页设计稿.html（设计稿，未改任何代码）
+
+1. 起因
+  用户反馈「统一年款肯定不够，要逐条」。v2 稿把年款放在左栏表单、一次写给本批全部选中项，
+  同一台车装不同支架、同一支架对不同车的年款区间往往不同，统一填会写错一半数据。
+
+2. 改动
+  - 左栏表单删除「年款」输入框（两个模式均删），提示改为指引到右侧已选面板
+  - 已选面板宽 230 → 300，每条改为两行：第一行 主标识 + 年款解析 chip + 移除；第二行 年款输入框（.yin）
+  - 新增「批量填充」行：一次填入全部条目但**不锁定**，填完仍可逐条改
+  - 逐条即时校验：非法年款 → 输入框描边转红 + chip 变「越界」+ 行下红字说明 + 保存按钮置灰
+    （按钮文案变「修正 N 条年款后保存」，类 .btndis / .msg.warn）
+  - 文档新增 v2→v3 对比表、逐条年款控件规范表；s4/s5/s6/s7 同步改写；版本号 v2 → v3
+
+3. 核对 schema 发现的坑（重要）
+  scraper/store.py:41  UNIQUE (source, bracket_id, brand, model, years_raw)
+  SQLite 的 UNIQUE 认为 NULL 互不相等 → 若「留空年款」写成 years_raw = NULL，重复录入拦不住会插重复行。
+  结论：手工录入的空年款必须存成空串 ''（year_from / year_to 仍可为 NULL）。已在 s6 标注。
+
+4. 遗留待确认
+  年款不同会落成多行 fitments，反查侧 Q2 需按 (支架, 车型) 聚合多年款，否则列表出现重复行；实现时一并确认。
+
+5. 影响范围 / 风险
+  仅文档，无代码与数据库改动。设计稿估算行数同步上调：add_page +380、db +130、ui +140（新增 PickedList / YearInput）。
+
+=== 追加：撤销逐条年款，设计稿改为 v4 ==
+时间：2026-10-26
+文件：docs/新增录入页设计稿.html（设计稿，未改任何代码）
+
+1. 起因
+  用户反馈「那逐条去掉吧, 搞复杂了」。v3 的逐条年款把已选面板每条拆成两行（标识行 + 年款输入框）、
+  额外加了解析 chip、行内红字校验、批量填充、保存按钮置灰逻辑，交互过重，撤销。
+
+2. 改动（整篇重写为 v4）
+  - 年款回到「左栏一个统一框」，作用于本批全部选中项；默认留空 = 全部年款
+  - 已选面板宽回 250、单行：标识 + 该条将写入的年款 + 移除
+  - 删除 v3 的 .batch/.yin/.ychip/.yerr/.btndis 等样式与逐条年款规范表
+  - s1 增加「已撤销：逐条年款」小节，记录为何放弃（不为 10% 场景付 100% 复杂度）
+  - 年款框加 chip 实时回显（全部 / 2024 – 2026 / 非法标红），保留最轻量的反馈
+  - 估算行数回调：add_page +330、db +115、ui +100（不再需要 YearInput 组件）
+
+3. 保留的两条技术结论（仍然有效）
+  a) 判重坑：store.py 的 UNIQUE(source, bracket_id, brand, model, years_raw) 认为 NULL 互不相等，
+     手工录入的空年款必须存空串 ''，否则重复录入拦不住。
+  b) 多年款并存：年款不同会落成多行 fitments，Q2 反查需按 (支架, 车型) 聚合，实现时确认。
+
+4. 影响范围 / 风险
+  仅文档，无代码与数据库改动。统一年款填错的风险由「默认留空 + 已选面板逐条回显」缓解。
+
+
+=== 实现：录入页（新增车型 / 新增支架，多选 + 统一年款）==
+时间：2026-10-26
+
+1. 新增文件
+  app/years.py (64)            parse_years() 先校验越界再调 scraper/normalize.normalize_years()；
+                               normalize 会静默丢弃越界 token（2021款 2060款 -> 2021），必须前置校验。
+  app/pages/add_page.py (137)  录入页外壳：模式分段按钮 + QStackedWidget + 最近录入表 + 顶部统计 hint。
+  app/pages/entry_forms.py (392) EntryForm 基类（336px 表单列 + 候选列表 + 已选面板 + 年款框 + 保存）
+                              ModelForm（品牌/车型 -> 多选支架）、BracketForm（支架号/图片/品牌筛选 -> 多选车型）
+                              import_image() 把选中图片复制成 data/images/bracket_<id>.<ext> 并清图缓存
+  app/tmp_check_manual.py / tmp_check_ui.py / tmp_check_save.py  三个可重复运行的离屏自检脚本
+
+2. 修改文件
+  app/db.py (+130, 共 278)
+    - write_connection(): 短开短关，timeout=15，WAL + synchronous=NORMAL（与爬虫一致），失败降级
+    - backup_database(): 用 SQLite backup API 做一致性快照到 data/backup/，保留 10 份
+    - add_manual(pairs, years_raw, targets, bracket): 单事务写入 brands/models/brackets/fitments
+    - **空年款存空串 ''，不存 NULL**：UNIQUE(source,bracket,brand,model,years_raw) 认为 NULL 互不相等，
+      存 NULL 会让重复录入拦不住（已用副本实测：第二次相同录入 added=0 skipped=1）
+    - manual_recent() / manual_count() / reload()（写后清字典缓存）
+    - Q2 bracket_models(): source='A' -> source IN ('A','M')，否则新录入支架在反查页看不到自己
+    - brackets() 的 fitment_count 也改为 IN ('A','M')
+  app/ui.py (+208, 共 638)
+    - CheckList: QListWidget 勾选 + 复用 search.filter_items 做拼音过滤；勾选状态存 _checked 字典，
+      按 brand 重建列表不会丢勾选；_rebuilding 标志避免 setCheckState 触发 itemChanged 递归
+    - PickedList: 数量 chip + 已选行 + 「移除选中」/双击移除；关闭横向滚动 + 文字省略
+    - chip(text, accent=False): 新增 accent 走 #chipNew（将新建用蓝框）
+  app/theme.py (+11)
+    #formTitle / #chipNew / QListWidget 及 item 样式（原样式表没有 QListWidget 规则）
+  app/main.py (+11, 共 232)
+    VIEW_LABELS 加「录入」、Ctrl+3、AddPage 入栈、on_data_changed() 清搜索索引 + 重建状态栏 + 两页 refresh_data()
+  app/pages/model_page.py (+14) / bracket_page.py (+19)
+    refresh_data(): 重建品牌/车型/支架下拉并保持当前选中项，避免新录入的品牌不出现
+  app/delegates.py (+6, 共 90)
+    来源圆点 M 分支取 config.C['warn']（橙黄）——A 路已是紫色，M 再用紫色会分不清
+
+3. 与设计稿的偏差
+  - 年款解析独立成 years.py（设计稿写在 db.py），避免 UI->db 反向依赖
+  - 已选面板用「移除选中」替代每行「移除」，省掉 200 行自定义行控件
+  - 最近录入按 fitment 行展示，不做批次聚合（没有批次表，不硬造口径）
+  - app/search.py 未改：拼音键缓存以文本为 key，新词自然重算，clear_cache() 会是死代码
+
+4. 自检结果（全部在 ky.db 副本上跑，未动真实库）
+  py_compile 14 个文件         COMPILE OK
+  years.parse_years          normal(2021,2022) / range(2021,2022) / empty(None,None) / 全系(None,None)
+                             bad: 2021款 2060款 -> ok=False 「2060」超出 1980-2035
+                             junk: qqq -> ok=False 看不懂这个写法
+  add_manual 2 条            added=2 skipped=0；重复录入 added=0 skipped=1
+  空年款两次录入             第二次 added=0 skipped=1（'' 判重生效，验证 NULL 坑已规避）
+  Q2 反查                    [('测试车型A','2021-2022',2021,2022,'M'), ('测试车型B','',None,None,'M')]
+  端到端 UI 保存              车型模式 成功 2 条 / 支架模式 成功 1 条，最近录入 2->3 行，hint 同步
+  反查可见性                  focus_bracket('ZZ9') -> [('保时捷','718','2024 - 2026','M')]
+  离屏截图                    logs/ui_check_model.png / logs/ui_check_bracket.png（布局核对用）
+
+5. 风险 / 待确认
+  - 写库新增了写连接：爬虫正在跑时录入可能因锁失败（已回滚 + 提示，不会写坏）
+  - 年款不同会落成多行 fitments，反查页暂不聚合，同一组合可能出现多行（后续按需处理）
+  - 候选列表无关键词时只显示前 200 条（301 个支架里有 101 个需靠搜索带出，标题旁已注明）
+
+=== 修复：code review 发现的 P1/P2 问题（方案 B）==
+时间：2026-10-26
+
+1. app/pages/entry_forms.py
+  P1-a 回执文案：新增 _receipt(result)
+    added=0 且 skipped=0 -> 已建档（未生成适配记录）   （原来显示「成功 0 条 · 跳过 0 条」）
+    added=0 且 skipped>0 -> 跳过 N 条（已存在，未写入）
+    added>0 且 skipped=0 -> 成功 N 条
+    两者都有 -> 成功 N 条 · 跳过 M 条（已存在）
+  P1-b 面板年款文案：_sync_year 把解析结果缓存到 self._years_state，_sync_picked 复用；
+    年款非法时面板显示「年款待修正」而不是「全部年款」（原实现给出相反暗示）。
+    顺带把每次击键两次 parse_years 降为一次。
+
+2. app/db.py
+  P2-a 备份同名覆盖：文件名同秒冲突时追加 -2 / -3 序号；
+    _prune_backups 改为按 mtime 排序（原来按文件名字典序，加序号后会排错，可能删掉较新的快照）。
+  P2-b INSERT OR IGNORE 吞错：add_manual 改为「先 SELECT 判重，再 INSERT」；
+    重复计数准确，NOT NULL 之类的真错误会抛出并整批回滚（原来被静默算成「已存在」）。
+
+3. app/ui.py
+  P2-c CheckList.check_visible 未判空：_by_key 返回 None 时不写入 _checked，避免后续按 key 取值抛 TypeError。
+    更正：review 报告里位置写成 set_checked，实际 set_checked 本来就有判空，缺陷在 check_visible。
+
+4. app/years.py
+  P2-d 硬依赖 scraper/normalize.py：改为 _load_normalizer() try/except ImportError，
+    失败时降级到内置 _FallbackYears（只支持 4 位年份与 2021到2024 / 2021-2024 区间，2 位年份 14款 会提示看不懂）。
+    目的：scraper 目录缺失时应用仍能启动做只读查询，而不是 import 阶段直接崩。
+
+5. 自检（全部在 ky.db 副本上）
+  备份序号      ky-...133121.db / -2.db / -3.db，三次保存三份不同文件（原实现只留 1 份）
+  保留份数      连续 17 次保存后 backup 目录仍为 10 份
+  判重          重复录入 added=0 skipped=1（SELECT 判重生效，空年款空串也判得住）
+  回执          仅建档 -> 已建档（未生成适配记录）；首次 -> 成功 1 条；重复 -> 跳过 1 条（已存在，未写入）
+  面板文案      年款填 2060款 -> 面板显示 1 号 · 年款待修正，保存按钮置灰
+  降级解析      SCRAPER_DIR 指向不存在目录 -> normalizer=_FallbackYears；2021-2024 / 2021款 2022款 / 2021款到2024款 / 全系 / 留空 全部正确；
+                2060款 仍被拒收；14款 降级后提示看不懂（可接受限制）
+  回归          tmp_check_manual / tmp_check_ui / tmp_check_save 全部通过，截图重新生成
+  py_compile 与 IDE 诊断  0 错误
+
+6. 新增临时脚本
+  app/tmp_check_fixes.py     备份序号 / 保留份数 / 回执文案 / 面板年款文案
+  app/tmp_check_fallback.py  模拟 scraper 目录缺失的降级解析
+
+7. 未处理（P3，按建议留到真觉得卡再做）
+  - 已选面板每次勾选整块重建（勾 200 条时重建 200 行）
+  - 品牌框每次击键 refresh() 重建候选列表
+  - 图片先落盘再写库，写失败留孤儿文件；换图后旧图不清理
+
+=== 修复：已选面板空态布局（用户截图反馈）==
+时间：2026-10-26
+
+1. 问题（实测证据）
+  离屏复现「新增支架 / 全空」状态：picked=250x459、list.visible=False、empty 标签高 208、remove_btn.enabled=True。
+  a) 已选面板是无边框裸 QFrame，列表隐藏后 208px 剩余空间全被提示标签吸收，QLabel 默认垂直居中，
+     文字因此飘在面板下半部，整块红框看着像没画对。
+  b) 按钮位置随状态跳：有选中时列表膨胀压到底部，无选中时换成标签膨胀把按钮顶到上三分之一。
+  c) 无选中时「移除选中」仍是可点状态，点了没反应。
+
+2. 改动
+  app/ui.py  PickedList
+    - 新增 QFrame#pickedBody 容器 + QStackedLayout：列表与空态提示互斥切换，两种状态都有同一块带描边的面板
+    - 空态提示改为两行并 AlignCenter，占满容器高度（不再靠隐藏列表挤出空白）
+    - remove_btn 移到容器之外、固定在面板底部；set_items 时 setEnabled(bool(items))，初始禁用
+    - 删除原来的 list/empty 互斥 setVisible 逻辑（改由 stack 切换）
+  app/theme.py
+    - 新增 QFrame#pickedBody（卡片底 + 1px 描边 + 4px 圆角）与 QFrame#pickedBody QListWidget（透明无边框）
+
+3. 验证
+  空态      empty 标签高 400（占满容器）、remove_btn.enabled=False、截图中面板有描边且提示居中、按钮贴底
+  有选中    截图 logs/ui_check_bracket.png：6 条已选正常显示，按钮恢复可用并贴底
+  回归      tmp_check_ui / tmp_check_save / tmp_check_fixes 全过
+            （保存 2+1 条、回执文案、备份序号、判重、降级解析均无回归）
+  静态检查  py_compile OK；IDE 诊断只有 main.py 的既有风格警告（percent 格式、PySide6 路径解析），非本次引入
+
+4. 新增脚本
+  app/tmp_shot_layout.py   按指定状态离屏截图 + 打印 picked/checklist/table 几何尺寸，用于布局核对
+
+5. 未改动
+  候选行文字「东风小康 东风小康C56」品牌重复：CheckList 用 text 作为候选映射键，去掉前缀会造成同名车型互相覆盖
+  （列表里会少一条），要改必须先把映射键换成索引，收益不抵改动量，暂留原样。
+
+============================================================
+2026-10-26  打包脚本 build.ps1 重写 + 端到端验证
+============================================================
+
+1. 问题（实测证据）
+  build.ps1 行为异常。根因：中文注释被写进无 BOM 的 .ps1，Windows PowerShell 5.1
+  在无 BOM 时按 ANSI 代码页（zh-CN 为 GBK）解码，UTF-8 多字节序列会把行尾换行
+  一并吞掉，导致后续语句被并到同一行，脚本解析错乱。
+
+2. 改动
+  build.ps1  全文重写为纯 ASCII（注释与输出串全部英文）
+    - 头部加约束说明 keep this file ASCII-only，禁止再写中文注释
+    - 三阶段保留：1/3 PyInstaller 打包 → 2/3 数据负载 → 3/3 Inno Setup 安装包
+    - 参数保留：-NoData（跳过数据负载，快速测试）、-Setup（追加生成 Setup.exe）
+    - 继续手工把 scraper/normalize.py 拷进 _internal\scraper
+      （该模块运行时经 sys.path 动态导入，PyInstaller 依赖分析看不到）
+    - --collect-all pypinyin 保留（pypinyin 带包数据，缺失会运行时报错）
+
+3. 验证（本次实跑，exit code 0）
+  .\build.ps1
+    PyInstaller 完成，dist\KYBracket\KYBracket.exe 生成
+    _internal\scraper\normalize.py 存在
+    _internal\pypinyin 存在，共 80 个文件（包数据完整）
+    data\ky.db + data\images + data\thumbs 就位，数据负载 26.9 MB
+    整包 128.5 MB
+  启动测试
+    Start-Process dist\KYBracket\KYBracket.exe → 8 秒内未退出（RUNNING）
+    确认冻结包可正常起窗，pypinyin 与 normalize 均无导入崩溃；随后手动结束进程
+
+4. 未完成 / 待办
+  Inno Setup 6 未安装（C:\Program Files (x86)\Inno Setup 6\ISCC.exe 与
+  C:\Program Files\Inno Setup 6\ISCC.exe 均不存在），-Setup 分支尚未验证。
+  需先 winget install --id JRSoftware.InnoSetup -e，再重跑 .\build.ps1 -Setup。
+
+------------------------------------------------------------
+2026-10-26  分发产物：绿色便携 zip
+------------------------------------------------------------
+
+1. 产物
+  dist\KYBracket-portable.zip   63.3 MB
+  SHA256  9A7D90ED852748ED1D2585CC27CAFF4FD701445233C7C3A81857CA25917A5DA1
+  打包方式  .NET ZipFile.CreateFromDirectory(Optimal, includeBaseDirectory=true)
+            即解压后只有一个顶层目录 KYBracket，不散落文件
+
+2. 验证（实测）
+  解压到 %TEMP%\kyb_portable_test
+    顶层目录只有 KYBracket
+    KYBracket\KYBracket.exe 存在
+    KYBracket\data\ky.db 存在
+    KYBracket\_internal\scraper\normalize.py 存在
+  启动 8 秒未退出（RUNNING），确认绿色版可正常起窗
+  首次启动在 exe 旁生成 KYBracket\logs\，说明 DATA_DIR 落在 exe 同级 data，
+  未退到 %LOCALAPPDATA%，绿色便携路径生效
+  验证后已删除临时目录
+
+3. 体积对比
+  KYBracket-Setup.exe   51.6 MB（Inno lzma2/max）
+  KYBracket-portable.zip 63.3 MB（Deflate Optimal；.NET Framework 无 SmallestSize 档）
+
+4. 未改动
+  build.ps1 尚未加 -Portable 开关，本次 zip 为手工生成；下次重新打包需手工重压，
+  或后续按需接入脚本。
+  另外 build.ps1 的 ISCC 探测路径仍未覆盖 per-user 安装目录
+  （%LOCALAPPDATA%\Programs\Inno Setup 6），跑 -Setup 仍会误报找不到。
+
+------------------------------------------------------------
+2026-10-26  build.ps1 增加 -Portable 开关 + ISCC 探测修复
+------------------------------------------------------------
+
+1. 改动
+  build.ps1
+    - 新增 -Portable 开关：3/3 阶段用 .NET ZipFile.CreateFromDirectory
+      (Optimal, includeBaseDirectory=true) 打 dist\KYBracket-portable.zip，
+      解压后只有单一顶层目录 KYBracket，不散落文件
+    - -Setup 与 -Portable 可同时使用，也可只用其一；两者都不给时打印
+      skipped 并以 DONE (app bundle only) 退出
+    - 新增 Find-Iscc 函数：先读注册表 InstallLocation
+      （HKCU / HKLM / HKLM\WOW6432Node 下 Inno Setup 6_is1），
+      再回退 %LOCALAPPDATA%\Programs\Inno Setup 6 与两个 Program Files 路径
+      原因：winget 静默安装的 Inno Setup 6.7.3 落在 per-user 目录，
+      原有硬编码路径全部探测不到，-Setup 会误报 Inno Setup not found
+    - 仍保持纯 ASCII；头部用法注释补充 -Portable 与组合用法
+
+2. 验证（本次实跑 .\build.ps1 -Portable -Setup，exit code 0）
+  == 1/3 PyInstaller bundle ==  通过
+  == 2/3 data payload ==        normalize.py 就位，数据负载 26.9 MB，整包 128.5 MB
+  == 3/3 output package ==
+    portable:  dist\KYBracket-portable.zip 63.3 MB
+    iscc:      C:\Users\36055\AppData\Local\Programs\Inno Setup 6\ISCC.exe（注册表命中）
+    installer: dist\KYBracket-Setup.exe 51.6 MB
+  DONE
+
+3. 说明
+  重打包后两个产物的 SHA256 均已变化，上一条记录的
+  zip 9A7D90ED...A5DA1 与 setup 2462304A...3BEDA 作废。
+  本次因命令确认弹窗连续超时，未能复核新校验值，待下次执行补记。
+
+------------------------------------------------------------
+2026-10-26  新增「品牌」「型号」两个卡片选择页（方案 C）
+------------------------------------------------------------
+
+1. 需求来源
+  用户给出两张参考图：① 品牌选择页（按拼音首字母分组 + 搜索 + logo + 两列卡片）；
+  ② 全部型号页（单分组 + 圆点 + 两列卡片）。
+  设计稿：docs/品牌与型号选择页设计稿.html（含 4.0 节可交互原型）
+
+2. 方案（用户已确认）
+  方案 C：新增两个独立导航页，点卡片跳转到对应查询页并预填；
+  现有 QComboBox 下拉原样保留，不改存量交互。
+  导航变为：按车型查 / 按支架查 / 品牌 / 型号 / 新增（Ctrl+1..5）
+
+3. 改动
+  app/ui.py（新增约 148 行）
+    - PickCard(QFrame)：64px 卡片，左侧 logo 40x40 或 10px 圆点，
+      中间名称，右侧计数；clicked 信号；set_selected 切换 objectName
+    - PickGrid(QScrollArea)：两列 QGridLayout + 分组标题；set_groups 整体重建；
+      picked 信号；空结果显示「没有匹配的结果」
+    - _group_head()：圆环 + 「字母 / 其他」+ 字母本体
+    - import 增加 QGridLayout
+
+  app/theme.py（新增 19 行 QSS）
+    - #groupHead / #groupDot / #groupLabel / #groupLetter / #groupTitle
+    - #pickCard / #pickCard:hover / #pickCardSel
+    - #pickLogo / #pickBullet / #pickName / #pickMeta
+
+  app/pages/brand_page.py（新增）
+    - BrandPickerPage(ui.Page)：搜索框 320px + 计数提示 + PickGrid
+    - initial_of()：中文取拼音首字母；英文/数字开头一律归「#」
+    - 组内按拼音全拼排序，「#」组排最后
+
+  app/pages/bracket_pick_page.py（新增）
+    - BracketPickerPage(ui.Page)：单分组「所有型号」
+    - sort_key()：自然序 1,2,3A,3B,4…10,11
+      原因：repo.brackets() 的 ORDER BY LENGTH(id), id 会把 3A/3B 排到 10 之后
+
+  app/main.py
+    - VIEW_LABELS 由 3 项扩到 5 项
+    - _build_pages 挂 brand_page / bracket_pick_page
+    - _connect_pages：brand_chosen -> open_brand_models；
+      bracket_chosen -> open_bracket_page（该处理函数原有）
+    - open_bracket_page 增加空值保护
+    - 新增 open_brand_models(brand)：切到「按车型查」并 focus_model(brand, "")
+    - 快捷键补 Ctrl+4 / Ctrl+5
+    - on_data_changed 增加两页 refresh_data
+
+4. 自检（app/tmp_check_pickers.py，全部通过）
+  initial_of    奥迪->A 奔驰->B 阿尔法罗密欧->A
+                ARCFOX极狐 / 212 / iCAR / MINI -> #
+  品牌页        269 个品牌，分组 ABCDFGHJKLMNOPQRSTWXYZ#
+                （数据里本就没有 E / I / U / V 开头），卡片 269，构建 392ms
+  品牌点击      信号返回「阿尔法罗密欧」
+  品牌过滤      ben->3  b->30  ao->33  zzz->0
+  型号页        300 个型号，卡片 300，构建 213ms
+  型号顺序      1号 2号 3A号 3B号 4号 5号 6号 7号（自然序，本轮修正）
+  型号点击      信号返回「3A号」
+  型号过滤      3->58  3a->1  10->13  zzz->0
+  主题切换      浅色下两页重建正常（269 / 300）
+
+5. 截图（logs/ui_shots/）
+  pick_brand_dark.png / pick_bracket_dark.png / pick_brand_light.png
+  卡片几何 607x64，列间距 16px，内容区 1280x670
+  注意：离屏(offscreen)渲染缺中文字体，截图里文字是方块，
+        属截图环境限制，真实窗口不受影响
+
+6. 未做 / 待确认
+  - 未在真实窗口下肉眼验收（命令确认弹窗多次超时）
+  - 未跑既有回归 tmp_check_ui / tmp_check_save / tmp_check_fixes
+  - 未重新打包，dist 里仍是旧版本
+  - 品牌页过滤 ao->33 结果偏宽；如需收窄可改为前缀优先
+
+------------------------------------------------------------
+2026-10-26  修复：型号页选完跳到「按支架查」全是空的
+------------------------------------------------------------
+
+1. 现象（用户截图）
+  在「型号」页点任意型号卡片，跳到「按支架查」后：
+    支架号输入框显示「38号 号」（多了一个"号"字）
+    右侧表格只有表头、没有任何数据行
+    左侧显示「适配车型 0 条 · 覆盖品牌 0 个 / 该支架暂无反查记录」
+
+2. 根因
+  ui.PickCard 把「显示文本」与「信号值」合成了同一个字段 value。
+  bracket_pick_page 构造卡片时 title 传的是 "%s号" % bracket_id，
+  于是 clicked 信号 emit 的也是 "38号"；而 BracketPage.focus_bracket() 需要
+  原始 bracket_id "38"。setCurrentText("38号") 匹配不到下拉项，
+  repo.bracket_models("38号") 返回 0 行。
+  品牌页没暴露该问题，因为品牌卡片的显示文本与查询值本来就是同一串。
+
+3. 改动
+  app/ui.py  PickCard
+    - 签名改为 (title, value=None, meta="", image_file="", bullet=False)
+    - 新增 self.title（显示）与 self.value（信号值），value 缺省回落到 title
+    - PickGrid.set_groups 改用关键字传参，并读取 item.get("value")
+  app/pages/bracket_pick_page.py
+    - items 增加 "value": str(row["bracket_id"])
+
+4. 验证（app/tmp_check_pickers.py 扩展后实跑）
+  title vs value     title=3A号  value=3A  has_hao=False
+  端到端 · 型号跳转  view=1  bracket_box="1"  table rows=913
+  端到端 · 品牌跳转  view=0  brand_box="阿尔法罗密欧"  model rows=3
+  其余用例           分组 / 过滤 / 排序 / 点击信号 / 主题切换与上一条一致
+  构建耗时           品牌 314ms、型号 130ms（首次 392 / 213，已预热）
+
+5. 说明
+  旧实例已结束并用新代码重启；重新打包前 dist\ 仍是旧版本。
+
+------------------------------------------------------------
+2026-10-26  查询结果就地编辑 + 行删除（按支架查 / 按车型查）
+------------------------------------------------------------
+
+1. 需求
+  用户要求两个查询页的结果表格可以直接改、可以直接删。
+  设计稿：docs/查询结果就地编辑设计稿.html（编辑态 / 校验失败 / 删除确认 / 明细表编辑）
+  方案按建议执行：提交即写库、三个删除入口、品牌车型也可改。
+
+2. 改动
+  app/models.py  DictTableModel
+    - 新增 editable 列白名单、edit_handler 回调、edit_failed 信号
+    - flags() 对白名单列返回 ItemIsEditable
+    - setData() 先比对原值，再交给 handler；handler 返回 (ok, message)，
+      失败时 emit edit_failed 且不修改内存行；异常兜底不穿透 Qt 事件循环
+
+  app/db.py
+    - model_brackets / bracket_models 的 SELECT 补 id（写回定位用，不显示）
+    - 新增 update_fitment(row_id, changes)：品牌车型非空校验、year 文本交给
+      years.parse_years() 重算 year_from/year_to/years_json，
+      写前 backup_database()，单事务，rowcount==0 视为记录已消失并回滚
+    - 新增 delete_fitment(row_id)：同样先备份后单事务，只删 fitments 一行
+    - 改品牌/车型时 INSERT OR IGNORE 同步 brands / models
+
+  app/ui.py
+    - make_table(columns, chips, dots, editable, on_edit) 支持就地编辑，
+      编辑触发 DoubleClicked | EditKeyPressed | AnyKeyPressed
+    - DetailPane 接收 editable/on_edit，新增 delete_requested 信号、
+      #errBar 错误条、show_error/clear_error/selected_row/delete_selected
+
+  app/pages/bracket_page.py
+    - EDITABLE = ("brand", "model", "years_raw")（range 派生列、source 只读）
+    - 过滤条新增「删除选中」按钮（danger 样式，未选中时禁用）
+    - 表格下方 errBar；selectionChanged 联动按钮可用态
+    - Delete 快捷键（WidgetWithChildrenShortcut，仅表格有焦点时生效）
+    - _on_edit 写库成功后 QTimer.singleShot(0, _after_write) 延后重跑查询，
+      避免在 setData 过程中重置 model 造成索引失效
+    - 删除走 QMessageBox 二次确认，默认按钮为「取消」
+
+  app/pages/model_page.py
+    - 同样接入 EDITABLE / 删除按钮 / Delete 键 / 错误条
+    - _after_write 会记住当前支架号，重跑查询后恢复选中（避免跳回第一条）
+
+  app/theme.py
+    - QPushButton#danger / :hover / :disabled
+    - QLabel#errBar（左侧 3px 红条 + @bad 文字）
+
+  app/main.py
+    - 新增 on_records_changed()：编辑或删除后重建统计、刷新两个卡片页字典
+
+3. 自检（全部在 ky.db 副本上）
+  app/tmp_check_edit.py
+    id 字段        bracket 38 共 19 行，首行 id=59566
+    可编辑列       brand True / model True / years_raw True
+                   range False / source False（符合预期）
+    改年款         '全部' -> '2019款 2020款'，year_from/to 重算为 2019/2020
+    改品牌车型     -> 测试品牌 / 测试车型，且已写入 brands 字典
+    非法年款       「2060」超出 1980 – 2035，拒绝写库
+    空品牌         品牌和车型不能为空，拒绝写库
+    删除           19 -> 18 行；重复删除报「这条记录已不存在」
+    备份           4 份快照（每次写前一份）
+
+  app/tmp_check_edit_ui.py（走真实 MainWindow）
+    setData 改年款 True，值 '2018款 2019款' 落库且 id 不变
+    setData 改品牌 True（改后因排序变化该行不再位于第 0 行，属正常）
+    setData 非法年款 False，errBar 显示「⚠ 「2060」超出 1980 – 2035」，值未变
+    删除按钮随选中行启用；删除后行数 19 -> 18
+
+  回归          tmp_check_ui / tmp_check_save / tmp_check_fixes 全部 DONE
+  IDE 诊断      0 错误
+
+4. 已知取舍
+  设计稿画的是行末「编辑 / 删除」文字链接，实际未做行内 widget：
+  913 行时逐行 setIndexWidget 会明显拖慢滚动，改为
+  「过滤条按钮 + Delete 键」，交互更轻量。
+  如需行内链接，需另写 QStyledItemDelegate 绘制，可后续补。
+
+5. 未做
+  未重新打包，dist\ 仍是旧版本；应用已用新代码重启。
+
+------------------------------------------------------------
+2026-10-26  删除入口改为列表行内「删除」链接
+------------------------------------------------------------
+
+1. 需求
+  用户要求把删除按钮从过滤条移进列表（行内）。与原设计稿一致。
+
+2. 方案取舍
+  setIndexWidget 每行塞 QPushButton：913 行会创建 913 个 widget，滚动明显变卡，弃用。
+  改用 QStyledItemDelegate 自绘文字并处理 editorEvent，零额外 widget。
+
+3. 改动
+  app/delegates.py
+    - 新增 LinkDelegate(Signal clicked(int))
+      paint：复用 _draw_base 画背景，再画 @bad 色文字，悬停时加下划线
+      editorEvent：左键释放且落在单元格内 → emit clicked(row)
+    - import 增加 QEvent / Signal
+
+  app/pages/bracket_page.py
+    - COLUMNS 末尾增加 ("__ops__", "操作", 76)，OPS_COLUMN = 5
+    - 表格 setItemDelegateForColumn(OPS_COLUMN, LinkDelegate) 并连 delete_row
+    - viewport().setMouseTracking(True) 让悬停下划线生效
+    - 移除过滤条「删除选中」按钮与 _sync_delete_btn
+    - 删除流程拆为 delete_row(行号) / delete_selected(Delete 键) → _delete_record(row)
+
+  app/ui.py  DetailPane
+    - COLUMNS 末尾增加 ("__ops__", "操作", 70)
+    - 同样挂 LinkDelegate，点击后 emit delete_requested(行 id)
+
+  app/pages/model_page.py
+    - 移除过滤条删除按钮与状态同步
+    - detail.delete_requested 连 delete_row(row_id)
+    - delete_selected 走同一套 _confirm_delete + delete_fitment
+
+  保留：Delete 快捷键（不占界面位置）；#danger / #errBar 样式未变。
+
+4. 验证（app/tmp_check_edit_ui.py 扩展后实跑）
+  列结构        6 列，末列表头「操作」，delegate 类型 LinkDelegate
+  行内链接删除  19 -> 18（直接调 delete_row）
+  Delete 键     18 -> 17
+  真实鼠标点击  17 -> 16（QTest.mouseClick 打在操作列单元格，
+                证明 editorEvent 生效，不只是方法可调用）
+  按车型查      明细表同样 6 列、末列「操作」
+  编辑链路      setData 改年款 / 改品牌仍正常；非法年款仍被拒并显示 errBar
+  回归          tmp_check_ui / tmp_check_save / tmp_check_fixes 全部 DONE
+  IDE 诊断      0 错误
+
+5. 体验说明
+  链接悬停时加下划线，鼠标左键释放即触发，仍走二次确认框（默认焦点在「取消」）。
+  未做手型光标：delegate 无法单独改 cursor，需要 view 级 hover 事件，暂不引入。
+
+------------------------------------------------------------
+2026-10-26  编辑方式改为弹窗面板（取消双击就地编辑）
+------------------------------------------------------------
+
+1. 需求
+  用户不要表格内双击编辑，改为点「编辑」弹出一个面板来改。
+
+2. 改动
+  app/edit_dialog.py（新增）
+    - RecordEditDialog(QDialog)：品牌 / 车型 / 年款原文 三个输入框
+    - 年款输入实时预览：years.parse_years() 成功显示「识别为 2019 – 2020」
+      或「全部年款」，失败显示 ⚠ 原因并把提示切成 dialogError 样式
+    - 「保存」由对话框自己写库（repo.update_fitment）；校验失败只更新提示、
+      对话框不关闭，用户输入不丢
+    - 打开时品牌框获得焦点并全选，便于直接改写
+
+  app/delegates.py  LinkDelegate
+    - 由单链接改为多链接：parts / colors，单元格横向均分，每份居中
+    - 新增 part_at(rect, x) 判断点击落在哪个链接
+    - 信号 clicked(row, part)
+
+  app/pages/bracket_page.py
+    - 表格恢复只读：make_table 不再传 editable / on_edit
+    - 操作列改 LinkDelegate(("编辑", "删除"), ("accent", "bad"))，宽度 76 -> 96
+    - on_ops_click(row, part)：0 走 edit_row，1 走 delete_row
+    - edit_row(row_index)：弹 RecordEditDialog，Accepted 后 _after_write
+    - 删除旧的 _on_edit 与 EDITABLE 常量
+
+  app/ui.py  DetailPane
+    - COLUMNS 操作列宽度 70 -> 96，挂双链接 delegate
+    - 新增 edit_requested 信号，_on_ops_click 按 part 分派
+
+  app/pages/model_page.py
+    - 明细表恢复只读，移除 EDITABLE / _on_edit
+    - 新增 edit_row(row_id)，连接 detail.edit_requested
+
+  app/theme.py
+    - QDialog 背景、#dialogTitle / #dialogSub / #dialogHint / #dialogError
+
+3. 验证（app/tmp_check_edit_ui.py 重写后实跑）
+  表格只读      flags 不含 ItemIsEditable（符合预期）
+  操作列        6 列，末列表头「操作」，delegate = LinkDelegate
+  链接分区      part_at(左 10) = 0「编辑」；part_at(右 90) = 1「删除」
+  弹窗改年款    预览「识别为 2018 – 2019」，保存 accepted=True，
+                库值 '2018款 2019款'，year_from/to 重算 2018/2019
+  弹窗非法年款  预览「⚠ 「2060」超出 1980 – 2035」，样式 dialogError，
+                保存 accepted=False，库值不变
+  弹窗空品牌    accepted=False，提示「⚠ 品牌和车型不能为空」
+  弹窗改品牌    accepted=True，且「临时品牌」已进 brands 字典
+  行内删除      19 -> 18
+  按车型查      明细表同样 6 列、末列「操作」
+  回归          tmp_check_ui / tmp_check_save / tmp_check_fixes / tmp_check_edit
+                全部 DONE
+  IDE 诊断      0 错误
+
+4. 截图（logs/ui_shots/，真实 Windows 平台渲染）
+  edit_table.png      按支架查表格，操作列「编辑 / 删除」并排
+  edit_dialog.png     编辑面板正常态 460x258
+  edit_dialog_bad.png 编辑面板年款非法态
+
+5. 说明
+  models.DictTableModel 的 editable / edit_handler 能力保留但页面不再使用，
+  属通用能力，后续若再做就地编辑可直接启用。
+  应用已用新代码重启；dist\ 仍是旧版本，未重新打包。
+
+------------------------------------------------------------
+2026-10-26  code review 修复（方案 B）：异常边界 / 跨来源语义 / 刷新粒度
+------------------------------------------------------------
+
+1. 来源
+  用户要求 review 代码，报告给出 P1×3、P2×9、P3×10；用户选方案 B
+  （A 的三项 + P1-2 + P2-1 + P2-2）。
+
+2. P1-1 写库异常边界
+  app/db.py
+    - 新增 _write_error(error, action)：把 sqlite3.Error 翻译成中文 ValueError
+      IntegrityError + UNIQUE -> 「库里已有一条完全相同的记录…请改年款原文或先删重复行」
+      locked / busy           -> 「数据库正被别的程序占用（可能爬虫正在抓取），请稍后重试」
+      其它                    -> 「<动作>失败：<原文>」
+    - add_manual / update_fitment / delete_fitment 的 with conn 外层加
+      except sqlite3.Error -> raise _write_error(...) from error
+    - backup_database() 的 source.backup() 也纳入翻译（快照失败算「备份数据库失败」）
+  app/edit_dialog.py
+    - save() 追加 except (sqlite3.Error, OSError) 兜底（连接阶段抛的错没经过 db 层翻译）
+  原因：编辑面板只捕 ValueError，UNIQUE 冲突与锁等待会穿透到 Qt 事件循环，
+        对话框不关也不提示，用户看到的是「点保存没反应」。
+
+3. P1-2 爬虫来源提示（未采纳「转 source='M' / 只允许改 M 行」）
+  取舍说明：转 M 会让原 A 键消失，爬虫 INSERT OR IGNORE 下次必再插一条，
+            结果变成 M/A 双份；只允许改 M 行等于锁死爬虫数据。
+            两条路都比现状差，故改为「原地 UPDATE 保留 source + 明确告知」。
+  app/edit_dialog.py
+    - 新增 SOURCE_LABELS / CRAWLER_NOTE / _source_note()
+    - 面板在副标题下多一行来源说明：M -> 「来源：手工录入」；
+      A/B -> 「来源：爬虫 A 路（按支架反查） · 修改不会被下次抓取覆盖，
+              但抓取可能再补一条同样内容的记录」
+  app/pages/model_page.py / app/pages/bracket_page.py
+    - 删除确认框：A/B 行追加「该记录来自爬虫（X 路），下次增量抓取可能重新写入。」
+
+4. P1-3 录入后按车型查结果陈旧
+  app/pages/model_page.py  refresh_data()
+    - 记下 brand/model 现值；品牌仍在列表就保留
+    - 车型只在「品牌没变且车型仍存在」时保留（原来无条件清空）
+    - 末尾补 run_query()（原来不重跑，筛选已刷新而表格还是上一次的结果）
+  与 bracket_page.refresh_data() 的既有行为对齐。
+
+5. P2-1 跨来源重复录入
+  app/db.py  add_manual()
+    - 判重 SQL 去掉 source 条件，改 COALESCE(years_raw,'') 比较
+    - 原因：爬虫 A/B 已收录同一组合时，再写一条 M 行会在两个查询页变成两条
+      一样的记录；NULL 年款与手录空串也视为同一行
+
+6. P2-2 记录变更后的刷新粒度
+  app/ui.py
+    - PickCard 保存 meta_label，新增 set_meta(text)
+    - PickGrid 新增 set_metas(mapping)：只改徽标，不重建卡片
+  app/pages/brand_page.py / bracket_pick_page.py
+    - 新增 refresh_if_changed()：品牌/支架集合没变时只更新「N 车型」/「N 适配」，
+      变了才走 _rerender() 全量重建
+  app/main.py  on_records_changed()
+    - 改调两个 refresh_if_changed()（原来无脑 refresh_data）
+  原因：编辑或删除一条 fitment 会重建 269+300 张卡（此前实测 314ms+130ms，
+        叠加 QSS polish 约 0.5s 冻结），而实际只变了一个计数
+
+7. P2-5 状态栏统计被临时消息抹掉
+  app/main.py
+    - _build_status() 改为维护 QLabel#statusStats，用 addPermanentWidget 常驻；
+      __init__ 增加 self._status_label = None
+  app/theme.py
+    - 新增 QLabel#statusStats（透明底 + @faint 11px）
+  原因：QStatusBar.showMessage(text, timeout) 过期后不会恢复之前的常驻消息，
+        第一次「已复制支架号」或搜索失败提示之后，统计就永久消失
+
+8. 验证（.venv\Scripts\python.exe，QT_QPA_PLATFORM=offscreen）
+  compileall app                     COMPILE OK
+  read_lints(app)                    0 诊断
+  回归脚本
+    tmp_check_edit_ui                全部符合预期（弹窗改年款 / 非法年款 / 空品牌 /
+                                     改品牌进字典 / 行内删除 19->18）
+    tmp_check_ui / tmp_check_save / tmp_check_fixes / tmp_check_manual  全部 DONE
+  定向自检（临时脚本 tmp_check_review_b.py，跑完已删）
+    P2-1 库里有 A 行时手录同组合   added=0，该组合总行数=1
+    P1-1 唯一约束冲突              抛 ValueError，文案「库里已有一条完全相同的记录…」
+    P1-3 奥迪查询 206 -> 207 行    品牌=奥迪、车型='' 保持，count_label 同步
+    P2-2 删除一条 fitment          品牌页 _rerender 调用 0 次、卡片对象未重建，
+                                   支架 38 徽标 19 适配 -> 18 适配
+    P2-5 临时消息过期后            临时消息=''，常驻统计仍在（支架 300 · 品牌 270 …）
+    P1-2 提示文案                  A/B 带「爬虫…再补一条」说明，M 只显示「手工录入」
+  真机启动   Start-Process .venv\Scripts\python.exe main.py（工作目录 app）
+             PID 31596，8 秒未退出，确认可起窗，随后手动结束
+
+9. 影响范围 / 风险
+  - 只改应用层；未动 schema、未动爬虫、未动读路径 SQL
+  - P2-1 语义变更：手录与爬虫已收录的组合会被判「已存在」跳过，
+    若确实要补一条 M 行走不通（回执显示「跳过 N 条（已存在）」）
+  - P2-2 依赖「集合不变则只更新计数」；将来卡片 meta 若加别的动态字段，
+    需要同步扩展 set_metas 的映射
+  - 未重新打包，dist\ 仍是旧版本
+
+10. 未处理（不在本次方案 B 范围）
+  P2-3 可编辑品牌框每击键 refresh / P2-4 删除后字典表留孤儿车型 /
+  P2-6 Repository(db_path) 形参失效 / P2-7 年款筛选走 years_json LIKE /
+  P2-8 编辑后行不属于当前查询时无反馈 / P2-9 单行写也做全库快照 /
+  P3 清单（死代码、补全模型累积、_group 重复计算等）
+
+------------------------------------------------------------
+2026-10-26  重新打包（含本轮 review 修复）
+------------------------------------------------------------
+
+1. 命令
+  .\build.ps1 -Portable -Setup     exit 0
+  PyInstaller 6.22.3 / Python 3.13.15 / Inno Setup 6（注册表命中 per-user 路径）
+
+2. 过程问题（已绕过，脚本未改）
+  a) 脚本第 64 行 Remove-Item dist\KYBracket 被环境的安全删除守卫拦下：
+     [SAFE_DELETE_BULK_CONFIRM_REQUIRED] count=1173 > 阈值 500。
+     绕过方式：先把旧产物改名 dist\KYBracket_prev（不触发删除），
+     PyInstaller 自身用 --noconfirm 重建输出目录。
+     dist\KYBracket_prev（约 128MB）为旧版本回滚副本，待用户决定是否删除。
+  b) 命令里加 2>&1 会让 PyInstaller 的 stderr 行变成 NativeCommandError，
+     叠加脚本内 $ErrorActionPreference="Stop" 直接终止打包（exit=1）。
+     结论：跑 build.ps1 不要做 stderr 合并。
+
+3. 产物（dist\）
+  KYBracket\KYBracket.exe      4.4 MB
+  KYBracket-portable.zip      63.3 MB  SHA256 AA42A5C77E8CBDDC02D3529A36760623D55165ABA4EA5B06A8C369D1CC90E12C
+  KYBracket-Setup.exe         51.6 MB  SHA256 4ED9FAC7BC26429AC3FFE2A6F63AB7C134D5C35CDE543E1B958CD0170885EECC
+  数据负载校验：data\ky.db 存在、_internal\scraper\normalize.py 存在、pypinyin 80 个文件
+
+4. 未完成
+  冻结包启动冒烟测试（Start-Process dist\KYBracket\KYBracket.exe）因命令确认弹窗
+  超时被取消，未取得 Running 证据；需重跑或由用户双击 exe 人工确认。

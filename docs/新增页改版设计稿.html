@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>新增页改版设计稿 · 支架多图 + 筛选合并</title>
+<style>
+:root{
+  --bg:#0f172a; --panel:#1e293b; --panel3:#334155; --bd:#334155; --line:#475569;
+  --text:#e2e8f0; --dim:#94a3b8; --faint:#64748b; --title:#f1f5f9;
+  --blue:#60a5fa; --green:#4ade80; --orange:#fb923c; --red:#f87171; --purple:#c4b5fd;
+  /* 应用本体（浅色主题）用真实色，与文档外壳是两套配色 */
+  --app-bg:#f3f3f3; --app-panel:#fafafa; --app-card:#ffffff; --app-input:#ffffff;
+  --app-bd:#d4d4d4; --app-chip:#eef2f7; --app-text:#1d1d1d; --app-dim:#5c5c5c;
+  --app-faint:#8a8a8a; --app-accent:#0f6cbd; --app-accent2:#dce9f7;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.75 "Microsoft YaHei","PingFang SC",system-ui,sans-serif;}
+.wrap{max-width:1100px;margin:0 auto;padding:40px 32px 96px;margin-right:260px}
+h1{font-size:28px;color:var(--title);margin:0 0 6px;padding-bottom:14px;border-bottom:2px solid var(--line)}
+h2{font-size:20px;color:var(--title);margin:44px 0 14px;padding-left:10px;border-left:4px solid var(--blue);padding-bottom:8px;border-bottom:1px solid var(--bd)}
+h3{font-size:17px;color:var(--title);margin:26px 0 10px;padding-left:8px;border-left:3px solid var(--faint)}
+h4{font-size:15px;color:var(--title);margin:18px 0 8px}
+p{margin:10px 0}
+b,strong{color:var(--title)}
+code{background:#0b1220;border:1px solid var(--bd);border-radius:3px;padding:1px 5px;font-size:13px;color:#cbd5e1}
+pre{background:#0b1220;border-left:3px solid var(--line);padding:14px 16px;overflow:auto;font-size:13px;line-height:1.7;border-radius:3px}
+pre code{background:none;border:none;padding:0}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+th{background:var(--panel3);color:var(--title);text-align:left;padding:8px 10px;border:1px solid var(--bd);font-weight:600}
+td{padding:8px 10px;border:1px solid var(--bd);vertical-align:top}
+tbody tr:nth-child(even){background:#16213a}
+.card{background:var(--panel);border-left:3px solid var(--blue);padding:12px 16px;margin:16px 0;border-radius:2px}
+blockquote{margin:16px 0;padding:12px 16px;background:#1c1917;border-left:3px solid var(--orange);color:#e7e5e4}
+blockquote b{color:var(--orange)}
+ul,ol{margin:10px 0 10px 22px;padding:0}
+li{margin:5px 0}
+.small{font-size:13px;color:var(--dim)}
+.tag{display:inline-block;font-size:12px;padding:1px 7px;border:1px solid var(--line);border-radius:2px;color:var(--dim);margin-right:6px}
+.tag.ok{color:var(--green);border-color:#2f6b45}
+.tag.no{color:var(--red);border-color:#7f3a3a}
+.tag.mid{color:var(--orange);border-color:#7a5228}
+
+/* 右侧固定目录 */
+nav.toc{position:fixed;top:0;right:0;width:260px;height:100vh;overflow:auto;
+  background:var(--panel);border-left:1px solid var(--bd);padding:28px 18px;font-size:13px}
+nav.toc .ttl{color:var(--title);font-weight:600;margin-bottom:12px;letter-spacing:.5px}
+nav.toc a{display:block;color:var(--dim);text-decoration:none;padding:4px 0;border-left:2px solid transparent;padding-left:9px}
+nav.toc a:hover{color:var(--title);border-left-color:var(--blue)}
+nav.toc a.sub{padding-left:22px;font-size:12.5px;color:var(--faint)}
+
+/* 应用线框（真实浅色） */
+.app{background:var(--app-bg);border:1px solid var(--line);border-radius:4px;overflow:hidden;
+  color:var(--app-text);font:12.5px/1.5 "Microsoft YaHei",sans-serif;margin:18px 0}
+.app .top{background:var(--app-panel);border-bottom:1px solid var(--app-bd);padding:8px 12px;display:flex;align-items:center;gap:10px}
+.app .logo{font-size:13px;font-weight:600}
+.app .subt{color:var(--app-faint);font-size:11.5px}
+.app .spacer{flex:1}
+.app .gs{background:var(--app-input);border:1px solid var(--app-bd);border-radius:3px;padding:3px 8px;color:var(--app-faint);width:200px}
+.app .nav{display:flex;gap:2px}
+.app .nav i{font-style:normal;padding:3px 9px;border-radius:3px;color:var(--app-dim);border:1px solid transparent}
+.app .nav i.on{background:var(--app-accent);color:#fff}
+.app .bar{background:var(--app-panel);border-bottom:1px solid var(--app-bd);padding:7px 12px;display:flex;align-items:center;gap:6px}
+.app .bar i{font-style:normal;padding:3px 10px;border-radius:3px;border:1px solid var(--app-bd);color:var(--app-dim)}
+.app .bar i.on{background:var(--app-accent);color:#fff;border-color:var(--app-accent)}
+.app .body{display:flex;gap:10px;padding:10px 12px}
+.app .col{width:270px;flex:none}
+.app .main{flex:1;min-width:0}
+.app .picked{width:120px;flex:none;background:var(--app-panel);border:1px solid var(--app-bd);border-radius:3px}
+.app .row{display:flex;align-items:center;gap:6px;margin:6px 0}
+.app .k{width:46px;color:var(--app-dim);flex:none}
+.app .in{flex:1;background:var(--app-input);border:1px solid var(--app-bd);border-radius:3px;padding:3px 7px;color:var(--app-dim);min-width:0}
+.app .chip{background:var(--app-chip);border:1px solid var(--app-bd);border-radius:3px;padding:1px 6px;color:var(--app-dim);font-size:11px}
+.app .chip.new{color:var(--app-accent);border-color:#9ec5e8;background:var(--app-accent2)}
+.app .btn{background:var(--app-accent);color:#fff;border-radius:3px;padding:4px 10px;text-align:center}
+.app .btn.ghost{background:#fff;color:var(--app-dim);border:1px solid var(--app-bd)}
+.app .hint{color:var(--app-faint);font-size:11px}
+.app .list{border:1px solid var(--app-bd);background:#fff;border-radius:3px}
+.app .li{display:flex;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid #f0f0f0;color:var(--app-text)}
+.app .li.on{background:var(--app-accent2)}
+.app .box{width:11px;height:11px;border:1px solid #b8b8b8;border-radius:2px;flex:none}
+.app .box.ck{background:var(--app-accent);border-color:var(--app-accent)}
+.app .title{font-weight:600;font-size:12.5px;color:var(--app-text)}
+.app .plate{width:150px;height:104px;background:#ececec;border:1px solid var(--app-bd);border-radius:3px;display:flex;align-items:center;justify-content:center;color:var(--app-faint)}
+.app .foot{background:var(--app-panel);border-top:1px solid var(--app-bd);padding:6px 12px;color:var(--app-faint);font-size:11px}
+.new{outline:2px dashed var(--orange);outline-offset:2px;border-radius:3px}
+.note{font-size:11px;color:var(--orange);margin-top:6px}
+
+/* 图片区：缩略图条 */
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;width:264px}
+.th{width:78px;height:58px;border:1px solid var(--app-bd);border-radius:3px;background:#ececec;
+  position:relative;display:flex;align-items:center;justify-content:center;color:var(--app-faint);font-size:11px}
+.th .x{position:absolute;top:-6px;right:-6px;width:15px;height:15px;border-radius:50%;background:#b91c1c;color:#fff;
+  font-size:10px;line-height:15px;text-align:center}
+.th .cover{position:absolute;left:0;bottom:0;background:rgba(15,108,189,.9);color:#fff;font-size:9.5px;padding:0 4px}
+.th.add{border-style:dashed;color:var(--app-accent);background:#fff}
+.preview{margin-top:8px;width:150px;height:104px;background:#ececec;border:1px solid var(--app-bd);border-radius:3px;
+  display:flex;align-items:center;justify-content:center;color:var(--app-faint)}
+
+@media print{
+  :root{--bg:#fff;--panel:#fff;--panel3:#eee;--bd:#bbb;--line:#999;--text:#111;--dim:#444;--faint:#666;--title:#000;
+    color-scheme: light;}
+  nav.toc{display:none}
+  .wrap{margin-right:0;max-width:none;padding:0}
+  body{background:#fff;color:#111}
+  pre,code{background:#f6f6f6;color:#111}
+  tbody tr:nth-child(even){background:#f7f7f7}
+  .card{background:#f4f6f8}
+  blockquote{background:#fdf6ec;color:#111}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<nav class="toc">
+  <div class="ttl">目录</div>
+  <a href="#s1">1. 需求与结论</a>
+  <a href="#s2">2. 改版后整体布局</a>
+  <a href="#s3">3. 支架多图（图片区）</a>
+  <a href="#s4">4. 筛选合并（候选头部）</a>
+  <a href="#s5">5. 两处改动对照表</a>
+  <a href="#s6">6. 规范表（尺寸/间距）</a>
+  <a href="#s7">7. 数据与接口改动</a>
+  <a href="#s8">8. 待确认项</a>
+  <a href="#s9">9. 实机复检与 v2 修订</a>
+  <a href="#s10">10. 新增车型弹窗</a>
+  <a href="#s11">11. 支架编辑弹窗（改名 + 多图）</a>
+</nav>
+
+<div class="wrap">
+<h1>新增页改版设计稿</h1>
+<p class="small">项目：后视镜支架查询（motorcycle） · 页面：新增 → 「新增支架」模式 · 日期：2026-10-28 · 状态：<span class="tag mid">待确认</span>未改代码</p>
+
+<h2 id="s1">1. 需求与结论</h2>
+<p>用户提出两点：</p>
+<ol>
+  <li><b>支架要支持上传多张图片</b>（现在只能选一张，且同名文件会覆盖）。</li>
+  <li><b>两个「筛选」能否合并</b>：左侧表单的「筛选 → 全部品牌」下拉，与右侧候选列表顶部的工具条（搜索框 / 全选筛选结果 / 清空已选）。</li>
+</ol>
+
+<div class="card">
+  <b>结论（一句话）：</b>品牌下拉从左侧表单<b>移入</b>右侧候选工具条，左侧只剩「支架号 / 图片 / 年款」；图片区由「单张预览」改为<b>缩略图条</b>（多图、可删、首图为封面），<code>brackets.image_file</code> 继续作为封面字段，新增 <code>bracket_images</code> 表存多图。
+</div>
+
+<h2 id="s2">2. 改版后整体布局</h2>
+<p>窗宽 1280 时：左栏 336px（表单）+ 候选区弹性 + 已选面板 180px。橙色虚线框 = 本次改动区域。</p>
+
+<div class="app">
+  <div class="top">
+    <span class="logo">后视镜支架查询</span><span class="subt">车型 / 支架 双向反查</span>
+    <span class="spacer"></span>
+    <span class="gs">全局搜索：车型 / 支架号 / 品牌（支持拼音）</span>
+    <span class="nav"><i>按车型查</i><i>按支架查</i><i>品牌</i><i>型号</i><i class="on">新增</i></span>
+    <i class="chip">浅色</i>
+  </div>
+  <div class="bar"><i class="on">新增车型</i><i>新增支架</i><span class="spacer"></span><span class="hint">手工适配 9 条 · 数据 10-27 09:07 · 保存前自动备份到 data/backup/</span></div>
+  <div class="body">
+    <div class="col">
+      <div class="title">支架信息</div>
+      <div class="row"><span class="k">支架号</span><span class="in">301A</span><span class="chip new">将新建</span></div>
+      <div class="row"><span class="k">图片</span><span class="btn ghost">＋ 添加图片</span><span class="hint">jpg/png/webp ≤8MB</span></div>
+      <div class="new" style="padding:6px">
+        <div class="thumbs">
+          <div class="th">图1<span class="x">×</span><span class="cover">封面</span></div>
+          <div class="th">图2<span class="x">×</span></div>
+          <div class="th add">＋</div>
+        </div>
+        <div class="note">多图缩略图条：78×58，一行 3 张，最多 6 张；第一张为封面</div>
+      </div>
+      <div class="row"><span class="k">年款</span><span class="in" style="min-height:20px"></span><span class="chip">全部年款</span></div>
+      <div class="note">年款已定（2026-10-28）：去掉占位符，只留 chip 作状态提示</div>
+      <div class="hint">支架号不存在时自动创建。年款写给本次勾选的全部车型；不确定就留空。</div>
+      <div class="row" style="margin-top:26px"><span class="btn">保存（3 条）</span><span class="btn ghost">清空</span></div>
+    </div>
+    <div class="main">
+      <div class="new" style="padding:6px">
+        <div class="row"><span class="title">选择适配车型</span><span class="hint">先筛品牌，再勾选</span>
+          <span class="in" style="max-width:120px">品牌：全部品牌 ▾</span>
+          <span class="in">搜索车型 / 品牌（支持拼音）</span>
+          <span class="btn ghost">全选</span><span class="btn ghost">清空</span>
+        </div>
+        <div class="note">品牌下拉合并进候选工具条；左栏原「筛选」行删除</div>
+      </div>
+      <div class="list" style="margin-top:8px">
+        <div class="li on"><span class="box ck"></span>ARCFOX极狐 考拉S</div>
+        <div class="li"><span class="box"></span>ARCFOX极狐 阿尔法S5</div>
+        <div class="li"><span class="box ck"></span>DS DS 3新能源（进口）</div>
+        <div class="li"><span class="box"></span>DS DS 9</div>
+        <div class="li"><span class="box"></span>GMC ACADIA</div>
+        <div class="li"><span class="box"></span>JEEP 大切诺基4XE</div>
+        <div class="li"><span class="box"></span>JEEP 指南者</div>
+      </div>
+    </div>
+    <div class="picked">
+      <div class="row" style="padding:6px 8px;margin:0"><span class="title">已选</span><span class="spacer"></span><span class="chip">3</span></div>
+      <div class="li">ARCFOX极狐 考拉S</div>
+      <div class="li">DS DS 3新能源</div>
+      <div class="li">GMC ACADIA</div>
+      <div class="hint" style="padding:6px 8px">× 只取消勾选，不生成适配记录</div>
+    </div>
+  </div>
+  <div class="foot">最近手工录入（source = M，按时间倒序）</div>
+</div>
+
+<blockquote><b>v5 修订（2026-10-28，已实施）：</b>用户要求<b>隐藏「新增车型」页签</b>。
+做法与 <code>main.py</code> 的 <code>HIDDEN_VIEWS</code> 一致：<code>add_page.py</code> 新增
+<code>HIDDEN_MODES = ("新增车型",)</code> 与 <code>DEFAULT_MODE = "新增支架"</code>；
+页签按钮不显示，<code>ModelForm</code> 仍在 stack 里（<code>set_mode(0)</code> 仍可用，删掉这一行即恢复）。
+只剩一个模式时连那一个按钮也收起，顶栏从 56 px 收成 40 px 的细信息条（右侧仍显示手工条数与数据时间）。
+本节后面的「两个模式并排」示图仅作历史参考。</blockquote>
+
+<blockquote><b>v6 修订（2026-10-28，已实施）：</b>「新增」页左侧卡片标题由<b>「支架信息」改为「新增车架」</b>
+（<code>BracketForm.TITLE</code>），与导航里的「车架」叫法统一。
+卡片内的小标签仍是「支架号 / 图片 / 备注」，如需一并改成「车架号」可再调。</blockquote>
+
+<h2 id="s3">3. 支架多图（图片区）</h2>
+<p>三种状态并排，高度保持一致，避免切换时左栏抖动。</p>
+
+<table>
+<tr><th style="width:33%">0 张（未选）</th><th style="width:33%">3 张（常用）</th><th>6 张（上限）</th></tr>
+<tr>
+<td>
+  <div class="thumbs"><div class="th add">＋ 添加图片</div></div>
+  <div class="hint" style="margin-top:6px">空态：虚线框既是入口也是提示</div>
+</td>
+<td>
+  <div class="thumbs">
+    <div class="th">图1<span class="x">×</span><span class="cover">封面</span></div>
+    <div class="th">图2<span class="x">×</span></div>
+    <div class="th">图3<span class="x">×</span></div>
+    <div class="th add">＋</div>
+  </div>
+  <div class="preview">选中图的大图预览 150×104</div>
+</td>
+<td>
+  <div class="thumbs">
+    <div class="th">图1<span class="x">×</span><span class="cover">封面</span></div>
+    <div class="th">图2<span class="x">×</span></div>
+    <div class="th">图3<span class="x">×</span></div>
+    <div class="th">图4<span class="x">×</span></div>
+    <div class="th">图5<span class="x">×</span></div>
+    <div class="th">图6<span class="x">×</span></div>
+  </div>
+  <div class="hint" style="margin-top:6px">满 6 张后「＋」变为禁用灰态，提示「最多 6 张」</div>
+</td>
+</tr>
+</table>
+
+<h3>交互约定（pros / cons 取舍）</h3>
+<table>
+<tr><th style="width:22%">做法</th><th>说明</th><th style="width:26%">取舍</th></tr>
+<tr><td><b>M1 缩略图条（推荐）</b></td><td>点「＋」多次选文件（支持多选对话框）；每张右上角 × 删除；第一张自动为封面，可点选其他张设为封面</td><td><span class="tag ok">同屏可见、操作直接</span>左栏高度 +56px</td></tr>
+<tr><td>M2 图库弹窗</td><td>左栏仍放大图预览，点「管理图片…」开弹窗增删</td><td><span class="tag ok">左栏不变高</span><span class="tag no">多一层弹窗，录入变慢</span></td></tr>
+</table>
+
+<blockquote><b>兼容性：</b><code>brackets.image_file</code> 保留为「封面」，反查页大图、按支架查卡片、按车型查缩略图全部沿用首图，不需要改读取逻辑；多出的图只在新表里，老库执行 <code>CREATE TABLE IF NOT EXISTS</code> 自动升级。</blockquote>
+
+<h2 id="s4">4. 筛选合并（候选头部）</h2>
+<h3>现状：一处筛选在两栏，视线来回跳</h3>
+<pre><code>左栏  筛选 [全部品牌 ▾]
+      右侧候选只列该品牌的车型      ← 提示文字还要解释一次
+右栏  选择适配车型 | 先按品牌筛选，再勾选 | [搜索车型/品牌] | 全选筛选结果 | 清空已选</code></pre>
+
+<h3>改版：全部收进候选工具条</h3>
+<pre><code>右栏  选择适配车型 | 品牌 [全部品牌 ▾] | [搜索车型/品牌] | 全选 | 清空
+左栏  （删除「筛选」行与其提示）</code></pre>
+
+<table>
+<tr><th style="width:22%">方案</th><th>优点</th><th>缺点 / 风险</th></tr>
+<tr><td><b>F1 合并到候选头部（推荐）</b></td><td>筛选与结果同一行，改品牌立即看到结果变化；左栏更短，图片区有地方放；只改 <code>ui.CheckList</code> 加一个可选的前置控件参数，<code>ModelForm</code> 不受影响</td><td>头部元素变多，1280 宽下搜索框被压缩；需把按钮文案缩为「全选 / 清空」（右栏可用宽度约 760px）</td></tr>
+<tr><td>F2 删搜索框、只留品牌下拉</td><td>最省地方</td><td><span class="tag no">搜索是高频操作，删掉明显倒退</span></td></tr>
+<tr><td>F3 保留两处，左栏改叫「默认品牌」</td><td>零改动</td><td><span class="tag no">同一个概念两个入口，就是现在的困惑来源</span></td></tr>
+</table>
+
+<h2 id="s5">5. 两处改动对照表</h2>
+<table>
+<tr><th style="width:16%">区域</th><th style="width:30%">现状</th><th style="width:30%">改版后</th><th>影响文件</th></tr>
+<tr><td>图片</td><td>单按钮「选择图片…」+ 150×108 预览；重选即覆盖</td><td>缩略图条（≤6 张）+ ＋ / × / 封面角标 + 选中预览</td><td><code>pages/entry_forms.py</code>、<code>ui.py</code>、<code>db.py</code>、<code>scraper/store.py</code></td></tr>
+<tr><td>品牌筛选</td><td>左栏下拉 + 提示文字</td><td>候选工具条第 2 个控件（带「品牌」前缀）</td><td><code>ui.py</code>(CheckList)、<code>pages/entry_forms.py</code></td></tr>
+<tr><td>候选按钮</td><td>全选筛选结果 / 清空已选</td><td>全选 / 清空（tooltip 保留完整说明）</td><td><code>ui.py</code>(CheckList)</td></tr>
+<tr><td>左栏高度</td><td>图片 1 行 + 大图</td><td>图片条 2 行以内 + 预览；删掉筛选行后总量基本持平</td><td>—</td></tr>
+</table>
+
+<h2 id="s6">6. 规范表</h2>
+<h3>图片区</h3>
+<table>
+<tr><th>项</th><th>值</th><th>说明</th></tr>
+<tr><td>缩略图</td><td>78 × 58，圆角 3</td><td>宽高比 4:3 裁切，<code>KeepAspectRatioByExpanding</code></td></tr>
+<tr><td>间距</td><td>横 6 / 纵 6</td><td>一行 3 张 = 78×3 + 6×2 = 246 ≤ 264 可用宽</td></tr>
+<tr><td>上限</td><td>6 张</td><td>满额时「＋」禁用</td></tr>
+<tr><td>删除按钮</td><td>15 × 15 圆形，右上 -6/-6</td><td>红底白 ×，hover 才完全显示</td></tr>
+<tr><td>封面色条</td><td>高 14，左下贴边</td><td>文字「封面」，字号 9.5</td></tr>
+<tr><td>预览</td><td>150 × 104</td><td>沿用现有 <code>photo_plate</code> 尺寸</td></tr>
+<tr><td>添加按钮</td><td>虚线 1px，文字「＋ 添加图片」</td><td>0 张时占满整行</td></tr>
+</table>
+<h3>候选工具条</h3>
+<table>
+<tr><th>项</th><th>值</th><th>说明</th></tr>
+<tr><td>行高</td><td>30</td><td>与现有 head 行一致</td></tr>
+<tr><td>品牌下拉</td><td>120 ~ 150（弹性 0）</td><td>首项「全部品牌」，其余按拼音序</td></tr>
+<tr><td>搜索框</td><td>弹性 1，最小 220</td><td>占位符不变</td></tr>
+<tr><td>按钮</td><td>66 × 28</td><td>「全选」「清空」，tooltip 写全称</td></tr>
+<tr><td>间距</td><td>8</td><td>与现有 layout spacing 一致</td></tr>
+</table>
+
+<h2 id="s7">7. 数据与接口改动（后端）</h2>
+<pre><code>-- scraper/store.py SCHEMA + app/db.py ensure_schema_ready()（老库自动升级）
+CREATE TABLE IF NOT EXISTS bracket_images (
+    bracket_id TEXT NOT NULL,
+    file_name  TEXT NOT NULL,
+    sort_index INTEGER NOT NULL DEFAULT 0,   -- 0 = 封面
+    added_at   TEXT,
+    PRIMARY KEY (bracket_id, file_name)
+);</code></pre>
+<pre><code># app/db.py
+Repository.bracket_images(bracket_id) -> [{"file_name", "sort_index", "added_at"}, ...]
+Repository.add_manual(..., bracket={"bracket_id": …, "images": ["a.jpg", …]})
+    # 事务内：brackets.image_file = images[0]（封面）
+    #        bracket_images 按顺序 upsert（sort_index 由顺序决定）</code></pre>
+<pre><code># app/pages/entry_forms.py
+def import_image(bracket_id, path, index=0):   # bracket_&lt;id&gt;_&lt;n&gt;.ext，n 取已有最大 +1，避免覆盖</code></pre>
+<p class="small">未改：<code>brackets.image_file</code> 的读取方（反查页大图 / 按支架查卡片 / 按车型查缩略图）—— 继续用封面。</p>
+
+<h2 id="s8">8. 待确认项</h2>
+<table>
+<tr><th style="width:8%">#</th><th>问题</th><th style="width:34%">我的建议</th></tr>
+<tr><td>Q1</td><td>多图上限几张？</td><td>6 张（左栏两行内放下）</td></tr>
+<tr><td>Q2</td><td>是否要「设置封面」和「删除已存图」？删除会写库</td><td>要：点缩略图设封面，× 删除仅标记，保存时一并生效</td></tr>
+<tr><td>Q3</td><td>输入已存在的支架号时，是否自动载入该支架已有图片？</td><td>要：提高复用性，一眼看到已有图</td></tr>
+<tr><td>Q4</td><td>候选按钮文案缩为「全选 / 清空」可否？</td><td>可以，tooltip 保留全称</td></tr>
+<tr><td>Q5</td><td>反查页是否也加「缩略图条」（否则只能看封面）</td><td>本次先不做，留作下一步</td></tr>
+</table>
+
+<blockquote><b>提醒：</b>本稿只是布局方案，<b>未修改任何业务代码</b>，也未打包。确认后再动 <code>db.py / entry_forms.py / ui.py / store.py</code>。</blockquote>
+
+<h2 id="s9">9. 实机复检与 v2 修订（2026-10-28）</h2>
+<p>第一版已实施并在真机上跑过，发现 4 处观感问题。下面左「现状」右「v2」，橙色虚线为改动点。</p>
+
+<table>
+<tr><th style="width:50%">现状（v1，问题）</th><th>v2 修订（建议）</th></tr>
+<tr>
+<td>
+  <div class="row"><span class="k">图片</span><span class="btn ghost">＋ 添加图片</span><span class="hint">3 / 6 张 · 第一张为封面</span></div>
+  <div class="thumbs" style="width:264px">
+    <div class="th" style="width:78px;height:58px">图1<span class="x">×</span><span class="cover">封面</span></div>
+    <div class="th" style="width:78px;height:58px">图2<span class="x">×</span></div>
+    <div class="th" style="width:78px;height:58px">图3<span class="x">×</span></div>
+    <div class="th add" style="width:78px;height:58px">＋</div>
+  </div>
+  <div class="preview">大预览 150×104（与首图重复）</div>
+  <div class="note">问题 1：3 列只占 246 / 336px，右侧空 90px<br>
+  问题 2：4 张时「＋」孤零零占第二行第一格<br>
+  问题 3：下方大预览与首图重复，白占 108px<br>
+  问题 4：保存/清空被 addStretch 顶到栏底，与表单脱节（中间空 ~200px）</div>
+</td>
+<td class="new">
+  <div class="row"><span class="k">图片</span><span class="btn ghost">＋ 添加图片</span><span class="hint">3 / 6 张 · 第一张为封面</span></div>
+  <div class="thumbs" style="width:320px">
+    <div class="th" style="width:100px;height:76px">图1<span class="x">×</span><span class="cover">封面</span></div>
+    <div class="th" style="width:100px;height:76px">图2<span class="x">×</span></div>
+    <div class="th" style="width:100px;height:76px">图3<span class="x">×</span></div>
+  </div>
+  <div class="note" style="color:var(--green)">
+    100 × 76，3 列 = 312 / 336px（基本填满）<br>
+    6 张正好两行，不再出现孤格<br>
+    去掉大预览：首图即封面，缩略图已能看清<br>
+    「＋」只保留行内按钮，不再占网格格位<br>
+    保存/清空上移到说明之后，空白留在最底部
+  </div>
+</td>
+</tr>
+</table>
+
+<h3>三种图片区形态对比</h3>
+<table>
+<tr><th style="width:18%">形态</th><th>尺寸 / 排布</th><th style="width:32%">评价</th></tr>
+<tr><td><b>P1 100×76 × 3 列（推荐）</b></td><td>6 张 = 2 行整；占高 158</td><td><span class="tag ok">格子对齐、宽度用满、高度比现在省 108</span></td></tr>
+<tr><td>P2 78×58 × 4 列</td><td>4×78 + 3×6 = 330；6 张 = 4+2</td><td><span class="tag mid">宽度用满，但 6 张仍断行，图更小</span></td></tr>
+<tr><td>P3 保留大预览</td><td>缩略图 78×58 + 预览 150×104</td><td><span class="tag no">重复显示同一张，左栏最挤</span></td></tr>
+</table>
+
+<h3>左栏高度分配（v2）</h3>
+<table>
+<tr><th>区块</th><th>高度</th></tr>
+<tr><td>标题 + 支架号行</td><td>56</td></tr>
+<tr><td>图片行（按钮 + 计数提示）</td><td>30</td></tr>
+<tr><td>缩略图区 2 行</td><td>158</td></tr>
+<tr><td>年款行</td><td>30</td></tr>
+<tr><td>说明文字</td><td>36</td></tr>
+<tr><td>保存 / 清空</td><td>30</td></tr>
+<tr><td>合计</td><td><b>约 340（原约 480）</b></td></tr>
+</table>
+
+<blockquote><b>已确认并实施（2026-10-28）：</b>① 去掉大预览；② 缩略图 100×76（3 列 312px）；③ 保存/清空上移。改动只在 <code>app/pages/entry_forms.py</code>：<code>THUMB</code>、去掉网格式「＋」、删除 <code>plate</code> 预览、<code>addStretch</code> 移到 <code>_build_actions</code> 之后。</blockquote>
+
+<h2 id="s10">10. 新增车型弹窗（品牌可选可输 + 多个车型）</h2>
+<p>原始需求：品牌下拉只能选已有品牌，新品牌必须去「新增车型」模式一条条录，所以要在候选工具条上直接建档。
+<b>2026-10-28 用户二次明确：按钮叫「＋ 新增车型」</b>——日常补的是车型，品牌多半已有；
+品牌因此做成<b>可编辑下拉</b>（已有品牌直接选，没有的品牌可直接输入并一并创建）。</p>
+
+<h3>10.1 入口：工具条按钮（最终采用）</h3>
+<table>
+<tr><th style="width:22%">方案</th><th>做法</th><th style="width:34%">评价</th></tr>
+<tr><td>E1 下拉末项</td><td>下拉底部「＋ 新增车型…」</td><td><span class="tag ok">不占宽度</span><span class="tag no">动作藏在数据列表里，不易发现</span></td></tr>
+<tr><td><b>E2 工具条按钮（采用）</b></td><td>「全选 / 清空」之后追加「＋ 新增车型」按钮</td><td><span class="tag ok">一眼可见、点了就是动作</span>占 104px，需给搜索框腾地方</td></tr>
+</table>
+
+<div class="app" style="width:760px">
+  <div class="row" style="padding:8px 10px;margin:0">
+    <span class="title">选择适配车型</span>
+    <span class="in" style="max-width:120px">品牌：全部品牌 ▾</span>
+    <span class="in">搜索车型 / 品牌（支持拼音）</span>
+    <span class="btn ghost">全选</span><span class="btn ghost">清空</span>
+    <span class="btn ghost" style="border-color:#0f6cbd;color:#0f6cbd">＋ 新增车型</span>
+  </div>
+  <div class="note" style="padding:0 10px 8px">为腾出宽度：候选头部的提示文字去掉、已选面板 250 → 220、品牌下拉 132 → 120</div>
+</div>
+
+<h3>10.1b 宽度实测（1280 窗口）</h3>
+<table>
+<tr><th>窗口宽</th><th>搜索框可用宽度</th><th>说明</th></tr>
+<tr><td>1400</td><td>338</td><td>宽松</td></tr>
+<tr><td><b>1280</b></td><td><b>218</b></td><td>可用；再窄会明显吃紧</td></tr>
+<tr><td>1120（最小窗宽）</td><td>58</td><td>偏挤，可考虑把三个按钮折到第二行（未做）</td></tr>
+</table>
+
+<h3>10.2 弹窗线框</h3>
+<div class="app" style="width:480px">
+  <div style="padding:16px 18px 12px">
+    <div class="title" style="font-size:14px">新增车型</div>
+    <div class="hint" style="margin-top:2px">车型挂在品牌下：已有品牌直接选，新品牌名会一并创建</div>
+    <div class="row" style="margin-top:12px"><span class="k">品牌</span><span class="in">长安启源 ▾</span><span class="chip new">将新建</span></div>
+    <div class="row" style="margin-top:10px"><span class="k">车型</span><span class="in">启源A05</span><span class="btn ghost" style="padding:2px 6px">×</span></div>
+    <div class="row" style="margin-top:6px"><span class="k"></span><span class="in">启源A07</span><span class="btn ghost" style="padding:2px 6px">×</span></div>
+    <div class="row" style="margin-top:6px"><span class="k"></span><span class="in">启源Q05</span><span class="btn ghost" style="padding:2px 6px">×</span></div>
+    <div class="row" style="margin-top:8px"><span class="btn ghost">＋ 添加车型</span><span class="spacer"></span><span class="hint">将新增 3 个车型</span></div>
+    <div class="hint" style="margin-top:2px">提示区：校验错误 / 已存在几个车型，显示在这里</div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <span class="btn ghost">取消</span><span class="btn">保存</span>
+    </div>
+  </div>
+</div>
+
+<table>
+<tr><th style="width:20%">控件</th><th>规格</th></tr>
+<tr><td>弹窗尺寸</td><td>宽 460，高随内容（约 300），模态</td></tr>
+<tr><td>品牌输入</td><td>QLineEdit，自动聚焦并全选；右侧 chip 实时显示「将新建 / 已存在」</td></tr>
+<tr><td>车型输入</td><td>QPlainTextEdit，高 96（约 5 行），一行一个；右下角实时计数</td></tr>
+<tr><td>行去重</td><td>去首尾空格、忽略空行、同名去重，超 200 行提示截断</td></tr>
+<tr><td>按钮</td><td>取消（普通）/ 保存（primary，默认键，回车触发）</td></tr>
+</table>
+
+<h3>10.3 车型输入：多行文本 vs 动态行</h3>
+<table>
+<tr><th style="width:22%">方案</th><th>优点</th><th>缺点</th></tr>
+<tr><td>D1 多行文本框</td><td>可整段粘贴一批车型；代码简单</td><td>不能逐行删改，用户 2026-10-28 明确否决</td></tr>
+<tr><td><b>D2 动态行（采用）</b></td><td>每个车型一个独立输入框，可单行删除、单行改错；空行自动忽略（= 允许只建品牌）；上限 20 行</td><td>行多时需滚动，粘贴多条要分次</td></tr>
+</table>
+
+<h3>10.4 保存后行为</h3>
+<ol>
+<li>写库：<code>Repository.add_brand_models(brand, models)</code> —— 先备份，再单事务 <code>INSERT OR IGNORE</code> 进 <code>brands</code> / <code>models</code>；不写 <code>fitments</code>。</li>
+<li>下拉重新填充并<b>自动切到新品牌</b>，右侧候选立刻只剩该品牌车型（0 车型则显示空列表 + 提示）。</li>
+<li>已勾选项保持不动（新品牌车型还没勾，不影响已有选择）。</li>
+<li>通知主窗口刷新其他页面的品牌/车型字典（复用现有 <code>saved</code> 链路）。</li>
+</ol>
+
+<pre><code># app/db.py（新增）
+Repository.add_brand_models(brand: str, models: list) -> dict
+    # {"brand_created": bool, "models_added": int, "models_skipped": int,
+    #  "backup": str}
+    # 空品牌名 -> ValueError("请填写品牌名")
+    # 车型为空 -> 允许，只建品牌</code></pre>
+
+<blockquote><b>已确认并实施（2026-10-28，v2）：</b>① 入口改为<b>候选工具条按钮「＋ 新增品牌」</b>（放在「全选 / 清空」之后），下拉里的末项已移除；② 车型输入用<b>动态行 D2</b>（用户明确否决 textarea）；③ 允许只建品牌（空行忽略；删光自动补一行空框）；④ 只加在「新增支架」页 —— 「新增车型」页的品牌框本身可编辑，直接输入新品牌名即可建档。</blockquote>
+
+<blockquote><b>v4 修订（2026-10-28，已实施）：</b>用户要求把按钮改成<b>「＋ 新增车型」</b>，
+弹窗随之改造（类名 <code>NewBrandDialog</code> → <code>NewModelDialog</code>）：
+<ul>
+  <li>品牌：<b>QLineEdit → 可编辑 QComboBox</b>（已有品牌直接选 + 拼音补全；没有的品牌仍可输入，会一并创建）；</li>
+  <li>标题 / 副标题改为「新增车型」「车型挂在品牌下：已有品牌直接选，新品牌名会一并创建」；</li>
+  <li><b>不再允许「只建品牌」</b>：至少填一个车型名，否则保存按钮置灰、点了提示「请至少填一个车型名」；</li>
+  <li>保存按钮文案带数量：「保存（N 个车型）」；</li>
+  <li>「新增支架」页建完<b>自动把新车型勾进候选</b>（省一次再找）；「新增车型」页保持自动填品牌框。</li>
+</ul>
+</blockquote>
+
+<blockquote><b>补充（2026-10-28，v3，已实施）：</b>「新增支架」页的「支架信息」卡新增<b>备注</b>行
+（<code>brackets.note</code>，200 字上限，右侧计数 chip，与「按支架查」页「编辑支架」弹窗同一字段）：
+<ul>
+  <li>位置：图片缩略图条下方、保存按钮上方，标签宽 52 与「支架号 / 图片」对齐；</li>
+  <li>输入支架号命中已有支架时，自动带出该支架的备注一起编辑；改成库里没有的新号时清空；</li>
+  <li>保存时超过 200 字截断（与弹窗口径一致），不会因为备注超长而拒绝保存；</li>
+  <li>只改备注不影响已有图片（<code>add_manual</code> 的 bracket 对账逻辑不变）。</li>
+</ul>
+</blockquote>
+
+<h2 id="s11">11. 支架编辑弹窗（改名 + 多图）</h2>
+<p>需求（2026-10-28）：在「按支架查」页左侧详情面板加<b>编辑</b>按钮，可改名称、可加图（多张），对应截图里 <code>9 号</code> 那块。</p>
+
+<h3>11.1 入口位置</h3>
+<div class="app" style="width:320px">
+  <div style="padding:12px">
+    <div class="plate" style="width:268px;height:120px">支架大图（封面）</div>
+    <div class="row" style="margin-top:10px"><span class="title" style="font-size:15px">9 号</span>
+      <span class="spacer"></span><span class="btn ghost new">编辑</span></div>
+    <div class="hint">适配车型 14 条 · 覆盖品牌 1 个</div>
+    <div class="row" style="margin-top:8px"><span class="btn">复制支架号</span></div>
+    <div class="row"><span class="btn ghost">在按车型查中查看</span></div>
+    <div class="note">编辑按钮放在「9 号」同一行右侧，紧挨标题</div>
+  </div>
+</div>
+
+<h3>11.2 弹窗线框</h3>
+<div class="app" style="width:520px">
+  <div style="padding:16px 18px 12px">
+    <div class="title" style="font-size:14px">编辑支架</div>
+    <div class="hint" style="margin-top:2px">改名会同步更新该支架下的全部适配记录</div>
+    <div class="row" style="margin-top:12px"><span class="k">支架号</span><span class="in">9</span><span class="chip">已存在</span></div>
+    <div class="row" style="margin-top:10px"><span class="k">图片</span><span class="btn ghost">＋ 添加图片</span><span class="hint">2 / 6 张 · 第一张为封面</span></div>
+    <div class="thumbs" style="width:320px;margin:6px 0 0 46px">
+      <div class="th" style="width:100px;height:76px">图1<span class="x">×</span><span class="cover">封面</span></div>
+      <div class="th" style="width:100px;height:76px">图2<span class="x">×</span></div>
+    </div>
+    <div class="hint" style="margin-top:8px">提示区：支架号已存在 / 图片读不出来 / 保存失败</div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <span class="btn ghost">取消</span><span class="btn">保存</span>
+    </div>
+  </div>
+</div>
+
+<h3>11.3 改名的连锁反应（关键）</h3>
+<table>
+<tr><th style="width:26%">表</th><th>处理</th></tr>
+<tr><td><code>brackets</code></td><td><code>UPDATE brackets SET bracket_id = 新号 WHERE bracket_id = 旧号</code>（主键改名）</td></tr>
+<tr><td><code>fitments</code></td><td><code>UPDATE fitments SET bracket_id = 新号</code>，同一事务；若有 UNIQUE 冲突整批回滚并报错</td></tr>
+<tr><td><code>bracket_images</code></td><td><code>UPDATE bracket_images SET bracket_id = 新号</code>，然后按弹窗里的列表做整表对账</td></tr>
+<tr><td><code>crosscheck</code></td><td><code>bracket_a / bracket_b</code> 里的旧号一并替换，否则交叉校验统计会失真</td></tr>
+<tr><td>封面</td><td><code>brackets.image_file</code> 写第一张图，其余视图（卡片/车型页缩略图）继续用封面</td></tr>
+</table>
+
+<blockquote><b>两种「名称」含义，需你选：</b><br>
+① <b>改支架号本身</b>（推荐，符合当前数据模型：支架没有独立名称字段，详情里显示的「9 号」就是 bracket_id）—— 会连带改 fitments / bracket_images / crosscheck，事务 + 备份，新号已存在则直接报错不合并；<br>
+② 另加一个「备注名」字段（新增 <code>title</code> 列）—— 只影响显示，不动任何关联数据，但要改表结构 + 三个页面的显示逻辑。</blockquote>
+
+<blockquote><b>待确认：</b>① 选 ① 还是 ②；② 目标支架号已存在时，是「报错拒绝」还是「合并两个支架的记录」（合并风险高，不建议）。</blockquote>
+</div>
+</body>
+</html>

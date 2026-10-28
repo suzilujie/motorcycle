@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>后视镜支架查询 · 录入页设计稿 v4（两模式 + 多选 + 统一年款）</title>
+<style>
+:root{
+  --page-bg:#0f172a; --page-panel:#1e293b; --page-line:#334155; --page-stroke:#475569;
+  --page-text:#e2e8f0; --page-dim:#94a3b8; --page-faint:#64748b; --page-head:#f1f5f9;
+  --blue:#60a5fa; --green:#4ade80; --orange:#fb923c; --red:#f87171; --purple:#c4b5fd;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{margin:0 auto; padding:36px 28px 90px; max-width:1100px;
+     background:var(--page-bg); color:var(--page-text);
+     font:16px/1.75 "Microsoft YaHei UI","Segoe UI",sans-serif;}
+h1{font-size:26px; color:var(--page-head); margin:0 0 6px; padding-bottom:14px;
+   border-bottom:2px solid var(--page-line);}
+.sub{color:var(--page-dim); font-size:14px; margin-bottom:26px}
+h2{font-size:20px; color:var(--page-head); margin:40px 0 12px; padding:0 0 6px 10px;
+   border-left:4px solid var(--blue); border-bottom:1px solid var(--page-line);}
+h3{font-size:16px; color:var(--page-head); margin:24px 0 8px; padding-left:8px;
+   border-left:3px solid var(--page-line);}
+p{margin:8px 0}
+b,strong{color:var(--page-head)}
+code{background:#0b1220; border:1px solid var(--page-line); border-radius:3px;
+     padding:1px 5px; font-size:13px; color:#cbd5e1}
+pre{background:#0b1220; border-left:3px solid var(--page-stroke); border-radius:3px;
+    padding:10px 12px; overflow-x:auto; font-size:13px; line-height:1.6; color:#cbd5e1}
+.card{border-left:3px solid var(--blue); background:var(--page-panel); padding:10px 14px;
+      margin:14px 0; font-size:14px}
+blockquote{margin:14px 0; padding:8px 14px; border-left:3px solid var(--orange);
+           background:#1c1917; color:#e7d9c9; font-size:14px}
+table{border-collapse:collapse; width:100%; margin:12px 0; font-size:13px}
+th,td{border:1px solid var(--page-line); padding:6px 9px; text-align:left; vertical-align:top}
+th{background:var(--page-line); color:var(--page-head); font-weight:600}
+td.mono{font-family:Consolas,monospace; font-size:12px}
+.toc{position:fixed; right:20px; top:96px; width:206px; font-size:13px; line-height:1.9;
+     border-left:1px solid var(--page-line); padding-left:14px; color:var(--page-dim)}
+.toc b{display:block; color:var(--page-head); font-size:12px; letter-spacing:.08em;
+       margin-bottom:6px; text-transform:uppercase}
+.toc a{color:var(--page-dim); text-decoration:none; display:block}
+.toc a:hover{color:var(--blue)}
+@media (max-width:1560px){ .toc{display:none} }
+.badge{display:inline-block; font-size:11px; padding:1px 7px; border:1px solid var(--page-stroke);
+       border-radius:10px; color:var(--page-dim); margin-left:8px; vertical-align:2px}
+.badge.pick{border-color:#1e40af; color:var(--blue)}
+.strike{color:var(--page-faint); text-decoration:line-through}
+
+/* ---------- simulated window ---------- */
+.mock{zoom:.84; margin:16px 0 4px}
+.win{--k-bg:#242424; --k-rail:#2a2a2a; --k-card:#2f2f2f; --k-card2:#343434;
+     --k-line:#3c3c3c; --k-line2:#4a4a4a; --k-text:#ececec; --k-dim:#a6a6a6;
+     --k-faint:#7d7d7d; --k-acc:#6cc9ff; --k-accbg:#1a86d9; --k-plate:#ececec;
+     --k-ok:#6cc788; --k-bad:#f1707b;
+     width:1280px; height:800px; overflow:hidden; display:flex; flex-direction:column;
+     background:var(--k-bg); color:var(--k-text); border:1px solid var(--page-stroke);
+     font:13px/1.5 "Microsoft YaHei UI","Segoe UI",sans-serif;}
+.win *{box-sizing:border-box}
+.topbar{height:52px; flex:none; display:flex; align-items:center; gap:10px;
+        padding:0 16px; background:var(--k-rail); border-bottom:1px solid var(--k-line)}
+.appname{font-size:15px; font-weight:600}
+.appsub{font-size:11px; color:var(--k-faint)}
+.grow{flex:1}
+.search{width:280px; font-size:12px; color:var(--k-faint); background:#1c1c1c;
+        border:1px solid var(--k-line2); border-radius:4px; padding:6px 10px}
+.seg{display:flex; border:1px solid var(--k-line2); border-radius:4px; overflow:hidden}
+.seg-i{font-size:12px; padding:5px 14px; color:var(--k-dim); background:var(--k-card)}
+.seg-i.on{background:var(--k-accbg); color:#fff}
+.ghost{font-size:12px; color:var(--k-dim); border:1px solid var(--k-line2);
+       border-radius:4px; padding:5px 10px; background:var(--k-card)}
+.page{flex:1; display:flex; flex-direction:column; gap:10px; padding:12px 16px 8px; min-height:0}
+.subtabs{flex:none; display:flex; align-items:center; gap:8px}
+.stab{font-size:12px; color:var(--k-dim); border:1px solid var(--k-line2); border-radius:14px;
+      padding:4px 16px; background:var(--k-card)}
+.stab.on{color:#fff; background:var(--k-accbg); border-color:var(--k-accbg); font-weight:600}
+.work{flex:1; display:flex; gap:12px; min-height:0}
+.panel{background:var(--k-card); border:1px solid var(--k-line2); border-radius:6px;
+       padding:12px 14px; display:flex; flex-direction:column; min-height:0}
+.ptitle{font-size:14px; font-weight:600}
+.phint{font-size:11px; color:var(--k-faint); margin-left:6px}
+.frow{display:flex; align-items:center; gap:10px; margin-top:10px}
+.flabel{width:56px; flex:none; font-size:12px; color:var(--k-faint)}
+.fld{font-size:12px; color:var(--k-text); background:#1c1c1c; border:1px solid var(--k-line2);
+     border-radius:4px; padding:6px 10px; min-width:110px}
+.fld.w{min-width:200px}
+.fld.ph{color:var(--k-faint)}
+.fld.err{border-color:#a33}
+.btnp{font-size:12px; color:#fff; background:var(--k-accbg); border:1px solid var(--k-accbg);
+      border-radius:4px; padding:6px 16px; font-weight:600}
+.btn{font-size:12px; color:var(--k-text); background:var(--k-card2); border:1px solid var(--k-line2);
+     border-radius:4px; padding:5px 11px}
+.chip{display:inline-block; font-size:11px; line-height:16px; padding:0 7px;
+      border:1px solid var(--k-line2); border-radius:9px; color:var(--k-dim);
+      background:#282828}
+.chip.new{color:var(--k-acc); border-color:#35618a}
+.chip.yr{color:var(--k-ok); border-color:#3d6b4a}
+.plate{background:var(--k-plate); border-radius:4px; display:flex; align-items:center;
+       justify-content:center; overflow:hidden; border:1px solid var(--k-line)}
+.plate img{width:100%; height:100%; object-fit:contain}
+.upload{width:120px; height:88px; margin-top:10px}
+.pick{flex:1; display:flex; flex-direction:column; min-height:0}
+.pickhead{display:flex; align-items:center; gap:8px}
+.sbox{flex:1; font-size:12px; color:var(--k-faint); background:#1c1c1c; border:1px solid var(--k-line2);
+      border-radius:4px; padding:5px 9px}
+.lists{display:flex; gap:8px; flex:1; min-height:0; margin-top:10px}
+.cand{flex:1.25; background:#282828; border:1px solid var(--k-line); border-radius:4px;
+      overflow:hidden; display:flex; flex-direction:column}
+.li{display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--k-line);
+    font-size:12px}
+.li .box{width:12px; height:12px; flex:none; border:1px solid var(--k-line2); border-radius:2px;
+         background:#1c1c1c; display:flex; align-items:center; justify-content:center;
+         font-size:10px; color:#fff}
+.li.on .box{background:var(--k-accbg); border-color:var(--k-accbg)}
+.li .num{font-family:Consolas,monospace; font-weight:600; width:62px; flex:none}
+.li .meta{color:var(--k-faint); font-size:11px}
+.li .th{width:26px; height:20px; flex:none}
+.picked{width:250px; flex:none; background:#282828; border:1px solid var(--k-line);
+        border-radius:4px; overflow:hidden; display:flex; flex-direction:column}
+.picked .h{font-size:11px; color:var(--k-faint); padding:6px 10px;
+           border-bottom:1px solid var(--k-line); display:flex; align-items:center}
+.picked .h b{color:var(--k-acc); margin-left:auto}
+.picked .li{display:flex; align-items:center; gap:6px; padding:7px 10px}
+.picked .rm{margin-left:auto; color:var(--k-faint); font-size:11px}
+.picked .empty{padding:14px 10px; font-size:11px; color:var(--k-faint); line-height:1.7}
+.acts{display:flex; gap:8px; align-items:center; margin-top:auto; padding-top:12px}
+.msg{font-size:11px; margin-left:auto}
+.msg.ok{color:var(--k-ok)}
+.msg.bad{color:var(--k-bad)}
+.tipbox{font-size:11px; color:var(--k-dim); background:#282828; border-left:2px solid var(--k-line2);
+        padding:7px 10px; line-height:1.65; margin-top:10px}
+.recent{flex:none; background:var(--k-card); border:1px solid var(--k-line2); border-radius:6px;
+        padding:10px 14px 12px}
+table.app{border-collapse:separate; border-spacing:0; width:100%; font-size:12px; margin-top:8px}
+table.app th{background:var(--k-card2); color:var(--k-faint); font-size:11px; font-weight:600;
+             text-align:left; padding:6px 10px; border-bottom:1px solid var(--k-line2)}
+table.app td{padding:0 10px; height:29px; border-bottom:1px solid var(--k-line)}
+table.app tr:nth-child(even) td{background:#282828}
+.mono{font-family:Consolas,"Microsoft YaHei UI",monospace}
+.status{height:26px; flex:none; display:flex; align-items:center; gap:14px; padding:0 16px;
+        font-size:11px; color:var(--k-faint); background:var(--k-rail); border-top:1px solid var(--k-line)}
+.status .r{margin-left:auto}
+.cap{font-size:12px; color:var(--page-faint); margin:6px 0 0}
+@media print{
+  :root{--page-bg:#fff; --page-panel:#f8fafc; --page-line:#cbd5e1; --page-stroke:#94a3b8;
+        --page-text:#1e293b; --page-dim:#475569; --page-faint:#64748b; --page-head:#0f172a;
+        color-scheme:light;}
+  body{background:#fff; color:#1e293b; max-width:none; padding:0 8mm}
+  .toc{display:none}
+  pre,code{background:#f1f5f9; color:#1e293b}
+  .mock{zoom:.72}
+  -webkit-print-color-adjust:exact; print-color-adjust:exact;
+}
+</style>
+</head>
+<body>
+
+<h1>后视镜支架查询 · 录入页设计稿 <span class="badge pick">v4</span></h1>
+<div class="sub">v4.1 · 2026-10-26 · <b>已实现并自检通过</b> · 车型与支架<b>分成两个模式、互不混录</b>，各自多选对方 · 年款用<b>一个统一框</b>（默认留空） · 1:1 逻辑尺寸 1280×800</div>
+
+<div class="card">
+  <b>实现状态（2026-10-26）</b>：已落地到 <code>app/</code>，离屏自检 + 数据库副本端到端保存均通过
+  （详见第 7 节「实现结果」）。下面两屏仍按真实 Qt 布局 1:1 模拟，与运行结果一致。
+</div>
+
+<nav class="toc">
+  <b>目录</b>
+  <a href="#s1">1. 版本变化</a>
+  <a href="#s2">2. 新增车型（多选支架）</a>
+  <a href="#s3">3. 新增支架（多选车型）</a>
+  <a href="#s4">4. 多选控件规范</a>
+  <a href="#s5">5. 校验与保存语义</a>
+  <a href="#s6">6. 数据落库</a>
+  <a href="#s7">7. 改动清单与风险</a>
+</nav>
+
+<h2 id="s1">1. 版本变化</h2>
+<table>
+  <tr><th style="width:150px">点</th><th>v1（旧稿）</th><th>v4（本稿）</th></tr>
+  <tr><td>结构</td><td>一张主表单混录「品牌+车型+支架」</td><td><b>两个独立模式</b>：新增车型 / 新增支架，页内胶囊切换</td></tr>
+  <tr><td>关系录入</td><td>一次只能挂 1 个支架</td><td>新增车型 → <b>可勾选多个支架</b>；新增支架 → <b>可勾选多个车型</b></td></tr>
+  <tr><td>年款</td><td>整张表单一个年款</td><td>左栏<b>一个统一年款框</b>，作用到本批全部选中项；<b>默认留空 = 全部年款</b></td></tr>
+  <tr><td>保存结果</td><td>1 条适配记录</td><td>N 条适配记录（N = 勾选数量），逐条去重，返回「成功 N / 跳过 M」</td></tr>
+  <tr><td>快捷入口</td><td>另有「只新增车型」「只新增支架」两个小卡</td><td>不再需要：不勾任何一项即等于「只建档」</td></tr>
+  <tr><td>已选面板</td><td>无</td><td>固定宽 250，每条一行：标识 + <b>该条最终写入的年款</b> + 移除</td></tr>
+</table>
+
+<h3>已撤销：逐条年款（per-row year）</h3>
+<table>
+  <tr><th style="width:150px">尝试过的 v3 方案</th><th>为什么撤销</th></tr>
+  <tr><td class="strike">已选面板每条两行 + 独立年款输入框</td><td>面板从 250 撑到 300+，每条两行 + 解析 chip + 行内红字校验，<b>交互过重</b>，录入一个支架要先切 4 次年款框</td></tr>
+  <tr><td class="strike">逐条即时校验 + 保存按钮置灰</td><td>为了少数「年款确实不同」的场景，给所有录入加了成本，得不偿失</td></tr>
+</table>
+<blockquote>
+  <b>结论：年款差异不靠界面解决，靠「默认留空」解决。</b>录入新车型/新支架时，年款信息本身往往还没核实清楚，
+  留空（= 全部年款）才是安全默认；真的需要精确年款时，只在少数条目上单独补录。界面不为 10% 的场景付 100% 的复杂度。
+</blockquote>
+
+<div class="card">
+  <b>为什么两个模式分开仍然成立</b>：两个方向的信息量本来就不对称——「这台新车能装哪几个支架」通常一次能说出 2~3 个；
+  「这个新支架适配哪些车」往往要勾一串车型。把两者塞进一张表单，必然一边要反复提交。
+</div>
+
+<h2 id="s2">2. 新增车型（多选支架）</h2>
+<div class="mock">
+  <div class="win">
+    <div class="topbar">
+      <span class="appname">后视镜支架查询</span><span class="appsub">车型 / 支架 双向反查</span>
+      <div class="grow"></div>
+      <span class="search">全局搜索：车型 / 支架号 / 品牌（支持拼音）</span>
+      <div class="seg"><span class="seg-i">按车型查</span><span class="seg-i">按支架查</span><span class="seg-i on">录入</span></div>
+      <span class="ghost">深色</span>
+    </div>
+    <div class="page">
+      <div class="subtabs"><span class="stab on">新增车型</span><span class="stab">新增支架</span></div>
+      <div class="work">
+        <div class="panel" style="width:330px; flex:none">
+          <div><span class="ptitle">车型信息</span><span class="phint">品牌/车型不存在时自动创建</span></div>
+          <div class="frow"><span class="flabel">品牌</span><span class="fld">奥迪</span><span class="chip">已存在</span></div>
+          <div class="frow"><span class="flabel">车型</span><span class="fld w">一汽奥迪Q5L 2025</span><span class="chip new">将新建</span></div>
+          <div class="frow"><span class="flabel">年款</span><span class="fld w ph">留空 = 全部年款（推荐）</span><span class="chip yr">全部</span></div>
+          <div class="tipbox">年款写法：<code>2021款 2022款</code> 或 <code>2021-2024</code> 或 <code>2021款到2024款</code>。
+            填了就写给本次<b>全部</b>勾选项；不确定就留空。越界年份（&lt;1980 / &gt;2035）就地标红。</div>
+          <div class="acts"><span class="btnp">保存（3 条）</span><span class="btn">清空</span>
+            <span class="msg ok">已选 3 个支架</span></div>
+        </div>
+        <div class="panel pick">
+          <div class="pickhead"><span class="ptitle">选择适配支架</span>
+            <span class="phint">可多选，支持拼音</span>
+            <span class="sbox" style="max-width:240px">搜索支架号 / 年份…</span>
+            <span class="btn">全选筛选结果</span><span class="btn">清空已选</span></div>
+          <div class="lists">
+            <div class="cand">
+              <div class="li on"><span class="box">✓</span><span class="num">141 号</span>
+                <span class="plate th"><img src="../scraper/data/images/bracket_141.jpg" alt=""></span>
+                <span class="meta">2015 – 2026 · 104 条</span></div>
+              <div class="li"><span class="box"></span><span class="num">10 号</span>
+                <span class="plate th"><img src="../scraper/data/images/bracket_10.jpg" alt=""></span>
+                <span class="meta">2003 – 2015 · 50 条</span></div>
+              <div class="li on"><span class="box">✓</span><span class="num">22 号</span>
+                <span class="plate th"><img src="../scraper/data/images/bracket_22.jpg" alt=""></span>
+                <span class="meta">2012 – 2018 · 44 条</span></div>
+              <div class="li"><span class="box"></span><span class="num">3A 号</span>
+                <span class="plate th"><img src="../scraper/data/images/bracket_3A.jpg" alt=""></span>
+                <span class="meta">2002 – 2014 · 21 条</span></div>
+              <div class="li on"><span class="box">✓</span><span class="num">301A 号</span>
+                <span class="plate th"><img src="../scraper/data/images/bracket_280.png" alt=""></span>
+                <span class="meta">手工新增 · 无适配</span></div>
+              <div class="li"><span class="box"></span><span class="num">55 号</span>
+                <span class="plate th"><img src="../scraper/data/images/bracket_55.jpg" alt=""></span>
+                <span class="meta">2004 – 2010 · 4 条</span></div>
+            </div>
+            <div class="picked">
+              <div class="h">已选支架 <b>3</b></div>
+              <div class="li"><span class="num">141 号</span><span class="meta">全部年款</span><span class="rm">移除</span></div>
+              <div class="li"><span class="num">22 号</span><span class="meta">全部年款</span><span class="rm">移除</span></div>
+              <div class="li"><span class="num">301A 号</span><span class="meta">全部年款</span><span class="rm">移除</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="recent">
+        <div><span class="ptitle">最近录入</span><span class="phint">手工数据（source = M），按时间倒序</span></div>
+        <table class="app">
+          <tr><th style="width:56px">类型</th><th style="width:110px">品牌</th><th>车型 / 支架</th>
+              <th style="width:130px">年款</th><th style="width:90px">对象</th><th style="width:130px">时间</th></tr>
+          <tr><td>车型</td><td>奥迪</td><td>一汽奥迪Q5L 2025</td><td>全部年款</td>
+              <td class="mono">3 个支架</td><td class="mono">2026-10-26 10:12</td></tr>
+          <tr><td>支架</td><td>—</td><td>301A</td><td>—</td>
+              <td class="mono">2 个车型</td><td class="mono">2026-10-26 10:05</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="status"><span>支架 301 · 品牌 269 · 车型 1,480</span><span>手工适配 5 条</span>
+      <span class="r">数据 2026-10-26 10:12</span></div>
+  </div>
+</div>
+<p class="cap">左边只填车型信息 + 一个年款（留空即可），右边勾支架；「已选」面板每条直接显示将要写入的年款，保存按钮上写「保存（3 条）」，避免误提交。</p>
+
+<h2 id="s3">3. 新增支架（多选车型）</h2>
+<div class="mock">
+  <div class="win">
+    <div class="topbar">
+      <span class="appname">后视镜支架查询</span><span class="appsub">车型 / 支架 双向反查</span>
+      <div class="grow"></div>
+      <span class="search">全局搜索：车型 / 支架号 / 品牌（支持拼音）</span>
+      <div class="seg"><span class="seg-i">按车型查</span><span class="seg-i">按支架查</span><span class="seg-i on">录入</span></div>
+      <span class="ghost">深色</span>
+    </div>
+    <div class="page">
+      <div class="subtabs"><span class="stab">新增车型</span><span class="stab on">新增支架</span></div>
+      <div class="work">
+        <div class="panel" style="width:330px; flex:none">
+          <div><span class="ptitle">支架信息</span><span class="phint">编号不存在时自动创建</span></div>
+          <div class="frow"><span class="flabel">支架号</span><span class="fld">301A</span><span class="chip new">将新建</span></div>
+          <div class="frow"><span class="flabel">图片</span><span class="btn">选择图片…</span>
+            <span class="phint">jpg / png，≤ 8MB</span></div>
+          <div class="plate upload"><img src="../scraper/data/images/bracket_280.png" alt=""></div>
+          <div class="frow"><span class="flabel">年款</span><span class="fld w">2024-2026</span><span class="chip yr">2024 – 2026</span></div>
+          <div class="tipbox">年款写给本次<b>全部</b>勾选车型。下图填了 2024-2026 只是演示统一写入的效果——
+            实际<b>建议留空</b>：911 从 2019 起、Q5L 只有 2025，硬套一个值就会写错。确需精确时按车型单独补录。</div>
+          <div class="acts"><span class="btnp">保存（4 条）</span><span class="btn">清空</span>
+            <span class="msg ok">已选 4 个车型</span></div>
+        </div>
+        <div class="panel pick">
+          <div class="pickhead"><span class="ptitle">选择适配车型</span>
+            <span class="phint">可多选，支持拼音</span>
+            <span class="fld" style="min-width:90px">品牌：全部</span>
+            <span class="sbox" style="max-width:220px">搜索车型…</span>
+            <span class="btn">全选筛选结果</span><span class="btn">清空已选</span></div>
+          <div class="lists">
+            <div class="cand">
+              <div class="li on"><span class="box">✓</span><span class="num" style="width:88px">保时捷</span>
+                <span style="flex:1">911</span><span class="meta">2019 – 2026</span></div>
+              <div class="li"><span class="box"></span><span class="num" style="width:88px">保时捷</span>
+                <span style="flex:1">Cayenne（卡宴）</span><span class="meta">2018 – 2026</span></div>
+              <div class="li on"><span class="box">✓</span><span class="num" style="width:88px">保时捷</span>
+                <span style="flex:1">Macan（玛卡）新能源</span><span class="meta">2024 – 2026</span></div>
+              <div class="li on"><span class="box">✓</span><span class="num" style="width:88px">大众</span>
+                <span style="flex:1">ID.4 CROZZ（一汽）</span><span class="meta">2021 – 2026</span></div>
+              <div class="li"><span class="box"></span><span class="num" style="width:88px">大众</span>
+                <span style="flex:1">ID.6X（上汽）</span><span class="meta">2021 – 2023</span></div>
+              <div class="li on"><span class="box">✓</span><span class="num" style="width:88px">奥迪</span>
+                <span style="flex:1">一汽奥迪Q5L 2025</span><span class="meta">2025 · 手工</span></div>
+            </div>
+            <div class="picked">
+              <div class="h">已选车型 <b>4</b></div>
+              <div class="li"><span style="flex:1">保时捷 911</span><span class="meta">2024–2026</span><span class="rm">移除</span></div>
+              <div class="li"><span style="flex:1">保时捷 Macan 新能源</span><span class="meta">2024–2026</span><span class="rm">移除</span></div>
+              <div class="li"><span style="flex:1">大众 ID.4 CROZZ（一汽）</span><span class="meta">2024–2026</span><span class="rm">移除</span></div>
+              <div class="li"><span style="flex:1">奥迪 一汽奥迪Q5L 2025</span><span class="meta">2024–2026</span><span class="rm">移除</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="recent">
+        <div><span class="ptitle">最近录入</span><span class="phint">刚保存的记录置顶并高亮 2 秒；重复组合会被跳过并计数</span></div>
+        <table class="app">
+          <tr><th style="width:56px">类型</th><th style="width:110px">品牌</th><th>车型 / 支架</th>
+              <th style="width:130px">年款</th><th style="width:90px">对象</th><th style="width:130px">时间</th></tr>
+          <tr><td>支架</td><td>—</td><td>301A</td><td>2024 – 2026</td>
+              <td class="mono">4 个车型</td><td class="mono">2026-10-26 10:20</td></tr>
+          <tr><td>支架</td><td>—</td><td>301A</td><td>—</td>
+              <td class="mono">2 个车型</td><td class="mono">2026-10-26 10:05</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="status"><span>支架 301 · 品牌 269 · 车型 1,480</span><span>手工适配 9 条</span>
+      <span class="r">数据 2026-10-26 10:20</span></div>
+  </div>
+</div>
+<p class="cap">车型侧多一个「品牌筛选」：车型库 1479 条，先按品牌收窄再勾选更快。「已选」面板右侧直接显示每条将写入的年款，填错了能一眼看到；真要改单条，走「按车型查」侧补录。</p>
+
+<h2 id="s4">4. 多选控件规范</h2>
+<table>
+  <tr><th style="width:150px">元素</th><th>规范</th></tr>
+  <tr><td>候选列表</td><td>每行 30px；左起 12px 复选框 → 主标识（支架号 / 品牌+车型）→ 缩略图或年款 → 右侧弱化元信息；未选无底色，选中行左侧不加条只换复选框（避免与主列表选中态混淆）</td></tr>
+  <tr><td>搜索框</td><td>复用全局拼音逻辑（全拼 / 首字母 / 中英混输），只过滤候选列表，不影响已选</td></tr>
+  <tr><td>已选面板</td><td>固定宽 <b>250</b>；每条一行：主标识 + 年款 + 「移除」；标题右侧显示数量；数量为 0 时整块显示「未选择 = 只建档，不生成适配记录」</td></tr>
+  <tr><td>年款框</td><td>左栏一个输入框 + 右侧 chip 实时回显解析结果（<code>全部</code> / <code>2024 – 2026</code>）；非法值输入框描边转红，不弹窗</td></tr>
+  <tr><td>批量操作</td><td>「全选筛选结果」只作用于当前过滤后的候选；「清空已选」一键清空</td></tr>
+  <tr><td>保存按钮</td><td>文案带数量：<b>保存（3 条）</b>；数量为 0 时变<b>保存（仅建档）</b>；存在非法年款时置灰</td></tr>
+  <tr><td>键盘</td><td>候选列表支持 ↑↓ 移动、空格勾选、Ctrl+A 全选当前筛选结果</td></tr>
+</table>
+
+<h2 id="s5">5. 校验与保存语义</h2>
+<table>
+  <tr><th style="width:130px">场景</th><th>行为</th></tr>
+  <tr><td>品牌 / 车型 / 支架号 不存在</td><td>自动创建，输入框右侧 chip 显示「将新建」（蓝）；已存在显示「已存在」（灰）</td></tr>
+  <tr><td>年款</td><td>一个统一值作用到本次全部选中项；<b>默认留空 = 全部年款</b>（year_from / year_to 写 NULL）；越界年份（&lt;1980 / &gt;2035）输入框标红并置灰保存</td></tr>
+  <tr><td>重复组合</td><td>库里已有 (source='M', 支架号, 品牌, 车型, 年款原文) → 跳过，计入「跳过 M 条」，不报错不覆盖</td></tr>
+  <tr><td>保存结果</td><td>绿字：<code>成功 3 条 · 跳过 1 条（已存在）</code>；表单不清空、已选保留，方便在同批基础上续加</td></tr>
+  <tr><td>事务</td><td>品牌/车型/支架/适配 全部在一个事务里；任一步失败整批回滚，不会留半个对象</td></tr>
+  <tr><td>保存前</td><td>自动备份 <code>ky.db</code> → <code>data/backup/ky-YYYYmmdd-HHMMSS.db</code>（保留最近 10 份）</td></tr>
+</table>
+
+<h2 id="s6">6. 数据落库</h2>
+<p>已核对 <code>scraper/store.py</code>：建表均为 <code>CREATE TABLE IF NOT EXISTS</code>、写入为 <code>INSERT OR IGNORE</code>，
+仅 <code>crosscheck</code> 会被 <code>DELETE</code> 后重建 → <b>手工写入同一 ky.db 不会被重爬清掉</b>。</p>
+<table>
+  <tr><th style="width:150px">动作</th><th>SQL（示意）</th></tr>
+  <tr><td>新增车型模式</td><td class="mono">INSERT OR IGNORE brands / models →<br>对每个选中支架：INSERT OR IGNORE fitments(source='M', bracket_id, brand, model, years_raw, year_from, year_to, years_json, fetched_at)</td></tr>
+  <tr><td>新增支架模式</td><td class="mono">INSERT OR IGNORE brackets(bracket_id, image_file, updated_at) →<br>对每个选中车型：INSERT OR IGNORE fitments(source='M', …)</td></tr>
+  <tr><td>判重键（已核对 schema）</td><td class="mono">UNIQUE (source, bracket_id, brand, model, years_raw) —— 年款不同即视为不同记录</td></tr>
+  <tr><td><b>NULL 判重坑</b></td><td>SQLite 的 UNIQUE 认为 NULL 互不相等 → 「留空年款」若写成 <code>years_raw = NULL</code>，同一条重复录入<b>拦不住</b>，会插重复行。手工录入的空年款必须存<b>空串 ''</b>（year_from / year_to 仍可为 NULL）</td></tr>
+  <tr><td>来源标记</td><td class="mono">fitments.source = 'M'；界面用紫色圆点区分，crosscheck 统计天然不含 M</td></tr>
+  <tr><td>只读边界</td><td class="mono">db.connect_readonly()（mode=ro）完全不动；新增 db.write_connection() 短开短关</td></tr>
+  <tr><td>需放宽的查询</td><td class="mono">Q2 bracket_models：source='A' → source IN ('A','M')，否则新录入的支架查不到自己</td></tr>
+</table>
+
+<h2 id="s7">7. 改动清单与风险</h2>
+<h3>实现结果（2026-10-26 实际落地）</h3>
+<table>
+  <tr><th style="width:200px">文件</th><th>改动</th><th style="width:80px">行数</th></tr>
+  <tr><td class="mono">app/pages/add_page.py</td><td><b>新增</b>：录入页外壳（模式切换 + 两表单 + 最近录入表）</td><td>137</td></tr>
+  <tr><td class="mono">app/pages/entry_forms.py</td><td><b>新增</b>：<code>EntryForm</code> 基类 + <code>ModelForm</code> + <code>BracketForm</code> + <code>import_image()</code></td><td>392</td></tr>
+  <tr><td class="mono">app/years.py</td><td><b>新增</b>：<code>parse_years()</code>（复用 <code>scraper/normalize.py</code>，先校验越界再解析）</td><td>64</td></tr>
+  <tr><td class="mono">app/db.py</td><td>写入层：<code>write_connection()</code>、<code>backup_database()</code>、<code>add_manual()</code>、<code>manual_recent()</code>、<code>manual_count()</code>、<code>reload()</code>；空年款存空串；Q2 放宽 A+M</td><td>278</td></tr>
+  <tr><td class="mono">app/ui.py</td><td><code>CheckList</code>（勾选 + 拼音搜索）、<code>PickedList</code>（已选 + 移除）、<code>chip(accent=)</code></td><td>638</td></tr>
+  <tr><td class="mono">app/pages/model_page.py / bracket_page.py</td><td>各加 <code>refresh_data()</code>，保存后刷新品牌/车型/支架字典</td><td>+14 / +19</td></tr>
+  <tr><td class="mono">app/main.py</td><td>顶栏第 3 段「录入」+ Ctrl+3 + <code>on_data_changed()</code>（清搜索索引、刷新状态栏与两页）</td><td>232</td></tr>
+  <tr><td class="mono">app/theme.py</td><td><code>#formTitle</code>、<code>#chipNew</code>、<code>QListWidget</code> 样式</td><td>137</td></tr>
+  <tr><td class="mono">app/delegates.py</td><td>来源圆点新增 M 分支（取调色板 warn 色）</td><td>90</td></tr>
+</table>
+
+<h3>与设计稿的偏差（实现时按实际技术约束调整）</h3>
+<table>
+  <tr><th style="width:190px">点</th><th>设计稿</th><th>实现</th></tr>
+  <tr><td>年款解析位置</td><td>写在 <code>db.py</code></td><td>独立 <code>app/years.py</code>：UI 每次击键都要校验，放在 db 层会绕成反向依赖</td></tr>
+  <tr><td>M 来源圆点颜色</td><td>紫色</td><td><b>橙黄（warn）</b>：A 路本来就用紫色 <code>#a78bfa</code>，再用紫色会撞色分不清</td></tr>
+  <tr><td>已选面板移除</td><td>每行一个「移除」</td><td>「移除选中」按钮 + 双击移除：QListWidget 原生即支持，省 200 行自定义行控件</td></tr>
+  <tr><td>最近录入表</td><td>批次汇总（「N 个支架」）</td><td><b>按 fitment 行展示</b>（支架号/品牌/车型/年款/来源/时间）：没有批次表就不硬造聚合口径</td></tr>
+  <tr><td>候选列表</td><td>无明显上限说明</td><td>无关键词时只显示前 200 条并在标题旁注明，关键词可搜全库</td></tr>
+  <tr><td><code>app/search.py</code></td><td>加 <code>clear_cache()</code></td><td><b>未改</b>：拼音键缓存以文本为 key，新词首次出现时自然重算，加 clear 是死代码</td></tr>
+</table>
+<table>
+  <tr><th style="width:170px">风险</th><th>缓解</th></tr>
+  <tr><td><b>写坏库</b>（无 git，库是唯一数据源）</td><td>每次保存前自动备份到 <code>data/backup/</code>，保留 10 份；整批事务</td></tr>
+  <tr><td>一批勾太多误提交</td><td>按钮带条数 + 保存后「成功/跳过」明确回执；不做自动清空，可立刻二次核对</td></tr>
+  <tr><td>与爬虫并发写</td><td>写连接 timeout=15；爬虫运行时录入可能失败并回滚（有提示，不会写坏）</td></tr>
+  <tr><td>多选列表卡顿</td><td>候选上限 200 条（筛选后），1479 车型先按品牌收窄</td></tr>
+  <tr><td>统一年款填错</td><td>默认留空（=全部年款）是安全值；已选面板逐条回显将写入的年款，一眼可见；填错后走「按车型查」侧补录正确条目</td></tr>
+  <tr><td>同组合多年款并存</td><td>年款不同会落成多行 fitments；反查侧需按 (支架, 车型) 聚合展示年款，否则列表出现重复行 —— <b>实现时一并确认 Q2 聚合方式</b></td></tr>
+  <tr><td>新增支架后仍无适配</td><td>允许「只建档」但明确提示：该支架在「按支架查」里会显示「暂无反查记录」</td></tr>
+</table>
+<div class="card">
+  <b>回滚</b>：删 <code>app/pages/add_page.py</code>，其余 5 个文件从 <code>app_backup_20261026/</code> 还原；数据库用 <code>data/backup/</code> 快照覆盖。
+</div>
+
+</body>
+</html>

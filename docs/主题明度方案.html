@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>KY 支架查询 · 界面明度方案（配色对比稿）</title>
+<style>
+:root{
+  --page-bg:#0f172a; --page-panel:#1e293b; --page-line:#334155; --page-stroke:#475569;
+  --page-text:#e2e8f0; --page-dim:#94a3b8; --page-faint:#64748b; --page-head:#f1f5f9;
+  --blue:#60a5fa; --green:#4ade80; --orange:#fb923c; --red:#f87171; --purple:#c4b5fd;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0 auto; padding:36px 28px 90px; max-width:1100px;
+  background:var(--page-bg); color:var(--page-text);
+  font:16px/1.75 "Microsoft YaHei UI","Segoe UI",sans-serif;
+}
+h1{font-size:26px; color:var(--page-head); margin:0 0 6px; padding-bottom:14px;
+   border-bottom:2px solid var(--page-line);}
+.sub{color:var(--page-dim); font-size:14px; margin-bottom:26px}
+h2{font-size:20px; color:var(--page-head); margin:38px 0 12px; padding:0 0 6px 10px;
+   border-left:4px solid var(--blue); border-bottom:1px solid var(--page-line);}
+h3{font-size:16px; color:var(--page-head); margin:24px 0 8px; padding-left:8px;
+   border-left:3px solid var(--page-line);}
+h4{font-size:14px; color:var(--page-head); margin:16px 0 6px}
+p{margin:8px 0}
+b,strong{color:var(--page-head)}
+code{background:#0b1220; border:1px solid var(--page-line); border-radius:3px;
+     padding:1px 5px; font-size:13px; color:#cbd5e1}
+pre{background:#0b1220; border-left:3px solid var(--page-stroke); border-radius:3px;
+    padding:10px 12px; overflow-x:auto; font-size:13px; line-height:1.6; color:#cbd5e1}
+.card{border-left:3px solid var(--blue); background:var(--page-panel); padding:10px 14px;
+      margin:14px 0; font-size:14px}
+blockquote{margin:14px 0; padding:8px 14px; border-left:3px solid var(--orange);
+           background:#1c1917; color:#e7d9c9; font-size:14px}
+table{border-collapse:collapse; width:100%; margin:12px 0; font-size:13px}
+th,td{border:1px solid var(--page-line); padding:6px 9px; text-align:left; vertical-align:top}
+th{background:var(--page-line); color:var(--page-head); font-weight:600}
+td.mono{font-family:Consolas,monospace; font-size:12px}
+.sw{display:inline-block; width:14px; height:14px; border:1px solid var(--page-stroke);
+    border-radius:2px; vertical-align:-2px; margin-right:6px}
+.toc{position:fixed; right:20px; top:96px; width:206px; font-size:13px; line-height:1.9;
+     border-left:1px solid var(--page-line); padding-left:14px; color:var(--page-dim)}
+.toc b{display:block; color:var(--page-head); font-size:12px; letter-spacing:.08em;
+       margin-bottom:6px; text-transform:uppercase}
+.toc a{color:var(--page-dim); text-decoration:none; display:block}
+.toc a:hover{color:var(--blue)}
+@media (max-width:1560px){ .toc{display:none} }
+
+/* ---------- simulated app window ---------- */
+.win{
+  --w-bg:#202020; --w-panel:#2b2b2b; --w-card:#2d2d2d; --w-input:#1f1f1f;
+  --w-alt:#313131; --w-header:#333333; --w-border:#3d3d3d; --w-scroll:#4a4a4a;
+  --w-text:#e6e6e6; --w-dim:#a0a0a0; --w-faint:#6e6e6e; --w-strong:#ffffff;
+  --w-accent:#4cc2ff; --w-accentbg:#0078d4;
+  margin:16px 0 6px; border:1px solid var(--page-stroke); border-radius:3px;
+  background:var(--w-bg); color:var(--w-text); font-size:12px; overflow:hidden;
+  font-family:"Microsoft YaHei UI","Segoe UI",sans-serif;
+}
+.win-a{ --w-bg:#2c2c2c; --w-panel:#363636; --w-card:#3a3a3a; --w-input:#262626;
+        --w-alt:#434343; --w-header:#484848; --w-border:#4c4c4c; --w-scroll:#5f5f5f;
+        --w-text:#f2f2f2; --w-dim:#b4b4b4; --w-faint:#868686; --w-strong:#ffffff;
+        --w-accent:#6cc9ff; --w-accentbg:#1a86d9; }
+.win-b{ --w-bg:#383838; --w-panel:#424242; --w-card:#474747; --w-input:#323232;
+        --w-alt:#515151; --w-header:#575757; --w-border:#606060; --w-scroll:#747474;
+        --w-text:#f5f5f5; --w-dim:#c6c6c6; --w-faint:#9a9a9a; --w-strong:#ffffff;
+        --w-accent:#7ad0ff; --w-accentbg:#0f7fd1; }
+.win-c{ --w-bg:#f3f3f3; --w-panel:#fafafa; --w-card:#ffffff; --w-input:#ffffff;
+        --w-alt:#f7f7f7; --w-header:#ececec; --w-border:#d4d4d4; --w-scroll:#bfbfbf;
+        --w-text:#1d1d1d; --w-dim:#5c5c5c; --w-faint:#8a8a8a; --w-strong:#0f172a;
+        --w-accent:#0f6cbd; --w-accentbg:#0f6cbd; }
+.win .tb{background:var(--w-panel); border-bottom:1px solid var(--w-border);
+         padding:9px 12px; display:flex; align-items:center; gap:10px}
+.win .tt{font-size:13px; font-weight:600; color:var(--w-text)}
+.win .ts{font-size:11px; color:var(--w-faint)}
+.win .sea{margin-left:6px; font-size:11px; color:var(--w-faint); background:var(--w-input);
+          border:1px solid var(--w-border); border-radius:3px; padding:4px 8px; width:260px}
+.win .tabs{display:flex; background:var(--w-bg); border-bottom:1px solid var(--w-border);
+           padding:0 12px}
+.win .tab{padding:8px 14px; font-size:12px; color:var(--w-dim);
+          border-bottom:2px solid transparent}
+.win .tab.on{color:var(--w-strong); border-bottom:2px solid var(--w-accent);
+             background:rgba(76,194,255,.10)}
+.win .page{padding:10px 12px 0}
+.win .prow{display:flex; align-items:center; gap:8px; margin-bottom:8px}
+.win .ptitle{font-size:14px; font-weight:600; color:var(--w-text)}
+.win .pmono{color:var(--w-dim); font-size:11px; font-family:Consolas,monospace}
+.win .phint{margin-left:auto; font-size:11px; color:var(--w-faint)}
+.win .frow{display:flex; align-items:center; gap:8px; margin-bottom:10px}
+.win .combo,.win .inp{background:var(--w-input); border:1px solid var(--w-border);
+        border-radius:3px; padding:4px 8px; font-size:11px; color:var(--w-text)}
+.win .combo{width:130px} .win .inp{width:170px; color:var(--w-faint)}
+.win .btn{background:var(--w-accentbg); color:#fff; border:1px solid var(--w-accentbg);
+          border-radius:3px; padding:4px 12px; font-size:11px}
+.win .minus{margin-left:auto; font-size:11px; color:var(--w-faint)}
+.win .cards{display:flex; gap:8px; margin-bottom:10px}
+.win .acard{width:150px; border:1px solid var(--w-border); background:var(--w-card);
+            border-radius:3px; padding:8px}
+.win .no{font-size:16px; font-weight:600; color:var(--w-accent)}
+.win .pic{height:78px; margin:4px 0; background:var(--w-input);
+          border:1px solid var(--w-border); display:flex; align-items:center;
+          justify-content:center; font-size:11px; color:var(--w-faint)}
+.win .cap{font-size:11px; color:var(--w-dim)}
+.win table.app{border-collapse:collapse; width:100%; font-size:12px;
+               border:1px solid var(--w-border); margin:0}
+.win table.app th{background:var(--w-header); color:var(--w-text); font-weight:600;
+                  border-right:1px solid var(--w-border);
+                  border-bottom:1px solid var(--w-border); padding:5px 6px; text-align:left}
+.win table.app td{background:var(--w-card); border-bottom:1px solid var(--w-border);
+                  padding:5px 6px; color:var(--w-text); text-align:left}
+.win table.app tr.alt td{background:var(--w-alt)}
+.win .sb{background:var(--w-panel); border-top:1px solid var(--w-border);
+         padding:5px 12px; font-size:11px; color:var(--w-dim); margin-top:10px}
+.tagline{font-size:12px; color:var(--page-faint); margin-top:2px}
+.badge{display:inline-block; font-size:11px; padding:1px 7px; border:1px solid var(--page-stroke);
+       border-radius:10px; color:var(--page-dim); margin-left:8px; vertical-align:2px}
+.badge.ok{border-color:#3f6212; color:var(--green)}
+.badge.pick{border-color:#1e40af; color:var(--blue)}
+@media print{
+  :root{ --page-bg:#ffffff; --page-panel:#f8fafc; --page-line:#cbd5e1; --page-stroke:#94a3b8;
+         --page-text:#1e293b; --page-dim:#475569; --page-faint:#64748b; --page-head:#0f172a;
+         color-scheme: light; }
+  body{background:#fff; color:#1e293b; max-width:none; padding:0 8mm}
+  .toc{display:none}
+  pre,code{background:#f1f5f9; color:#1e293b}
+  -webkit-print-color-adjust:exact; print-color-adjust:exact;
+}
+</style>
+</head>
+<body>
+
+<h1>KY 支架查询 · 界面明度方案</h1>
+<div class="sub">配色对比稿 v1.0 · 2026-10-24 · 未提交未构建，仅预览 · 4 套候选（现状 + A/B/C）</div>
+
+<nav class="toc">
+  <b>目录</b>
+  <a href="#s0">0. 怎么用这份稿</a>
+  <a href="#s1">1. 现状（基准）</a>
+  <a href="#s2">2. 方案 A 提亮深灰</a>
+  <a href="#s3">3. 方案 B 中性石墨</a>
+  <a href="#s4">4. 方案 C 浅色</a>
+  <a href="#s5">5. 四套对照表</a>
+  <a href="#s6">6. 实现影响面</a>
+  <a href="#s7">7. 选择建议</a>
+</nav>
+
+<h2 id="s0">0. 怎么用这份稿</h2>
+<div class="card">
+  下面每套方案都给出「<b>1:1 模拟窗口</b>」：宽度按应用实际 1280px 等比缩到 1044px 展示（约 0.82 倍），
+  控件层级、字号、间距与真实界面一致，只换配色。你看哪套顺眼，告我编号（A / B / C）即可，我再改
+  <code>app/config.py</code> 的 <code>C</code> 调色板并跑一次启动验证。
+</div>
+<p>三套候选的定位：</p>
+<table>
+  <tr><th style="width:120px">方案</th><th>定位</th><th style="width:180px">和现状的距离</th></tr>
+  <tr><td><b>A 提亮深灰</b></td><td>仍是深色主题，整体亮度上抬约一档，接近 VS Code「Dark+ 提亮版」/ Windows 10 深灰</td><td>小改，观感熟悉</td></tr>
+  <tr><td><b>B 中性石墨</b></td><td>明显的中灰，接近 GitHub Dark Dimmed、Windows 高对比关闭时的「浅灰面板」</td><td>中改，亮不少</td></tr>
+  <tr><td><b>C 浅色</b></td><td>真正的浅色主题（白底深字），接近 Windows 11 浅色模式 / Excel</td><td>大改，完全换风格</td></tr>
+</table>
+<blockquote>说明：<b>明亮</b>（brighter）与<b>浅色</b>（light theme）是两件事。只想要「没那么黑」选 A；想「明显亮」选 B；想换成白底选 C。</blockquote>
+
+<h2 id="s1">1. 现状（基准）<span class="badge">当前线上</span></h2>
+<div class="win">
+  <div class="tb"><span class="tt">KY 支架查询</span><span class="ts">　康业后视镜支架适配库　</span><span class="sea">全局搜索：品牌 / 车型 / 支架号（回车）</span></div>
+  <div class="tabs"><span class="tab on">按车型查</span><span class="tab">按支架查</span></div>
+  <div class="page">
+    <div class="prow"><span class="ptitle">按车型查支架</span><span class="pmono">model → bracket</span><span class="phint">主视图：先用 5 张（维度），缩放 80% 大屏可查</span></div>
+    <div class="frow"><span class="combo">AIRCROSS填充</span><span class="inp">　</span><span class="combo" style="width:120px">年份（可选）</span><span class="btn">查询</span><span class="minus">7 条记录 · 3 个支架</span></div>
+    <div class="cards">
+      <div class="acard"><div class="no">280 号</div><div class="pic">支架图</div><div class="cap">2024-2026 B</div></div>
+      <div class="acard"><div class="no">231 号</div><div class="pic">支架图</div><div class="cap">2024-2026 B</div></div>
+      <div class="acard"><div class="no">269 号</div><div class="pic">支架图</div><div class="cap">2024-2026 A</div></div>
+    </div>
+    <table class="app">
+      <tr><th style="width:80px">支架号</th><th style="width:210px">年款（原文）</th><th style="width:130px">行一化区间</th><th style="width:70px">来源</th><th>车型</th></tr>
+      <tr><td>280</td><td>2024款</td><td>2024</td><td>B</td><td>奥迪Q5</td></tr>
+      <tr class="alt"><td>231</td><td>2024款 2025款 2026款</td><td>2024-2026</td><td>B</td><td>阿尔法罗密欧</td></tr>
+      <tr><td>269</td><td>2023款（常规加长款）2025款 2026款</td><td>2023-2026</td><td>A</td><td>林肯Z</td></tr>
+      <tr class="alt"><td>280</td><td>2024款</td><td>2024</td><td>A</td><td>奥迪Q5</td></tr>
+      <tr><td>269</td><td>2026款（常规加长款）</td><td>2026</td><td>A</td><td>问界M9</td></tr>
+    </table>
+    <div class="sb">支架 300 · 品牌 269 · 车型 1,479 · 适配记录 6,086 · 校验 10,804 · 数据时间 2026-10-24 16:13</div>
+  </div>
+</div>
+<div class="tagline">现状色值：底 <code>#202020</code> · 面板 <code>#2b2b2b</code> · 卡片 <code>#2d2d2d</code> · 表格斑马 <code>#313131</code> · 表头 <code>#333333</code> · 描边 <code>#3d3d3d</code> · 正文 <code>#e6e6e6</code></div>
+
+<h2 id="s2">2. 方案 A 提亮深灰（Dark Lifted）<span class="badge pick">改动最小</span></h2>
+<div class="win win-a">
+  <div class="tb"><span class="tt">KY 支架查询</span><span class="ts">　康业后视镜支架适配库　</span><span class="sea">全局搜索：品牌 / 车型 / 支架号（回车）</span></div>
+  <div class="tabs"><span class="tab on">按车型查</span><span class="tab">按支架查</span></div>
+  <div class="page">
+    <div class="prow"><span class="ptitle">按车型查支架</span><span class="pmono">model → bracket</span><span class="phint">主视图：先用 5 张（维度），缩放 80% 大屏可查</span></div>
+    <div class="frow"><span class="combo">AIRCROSS填充</span><span class="inp">　</span><span class="combo" style="width:120px">年份（可选）</span><span class="btn">查询</span><span class="minus">7 条记录 · 3 个支架</span></div>
+    <div class="cards">
+      <div class="acard"><div class="no">280 号</div><div class="pic">支架图</div><div class="cap">2024-2026 B</div></div>
+      <div class="acard"><div class="no">231 号</div><div class="pic">支架图</div><div class="cap">2024-2026 B</div></div>
+      <div class="acard"><div class="no">269 号</div><div class="pic">支架图</div><div class="cap">2024-2026 A</div></div>
+    </div>
+    <table class="app">
+      <tr><th style="width:80px">支架号</th><th style="width:210px">年款（原文）</th><th style="width:130px">行一化区间</th><th style="width:70px">来源</th><th>车型</th></tr>
+      <tr><td>280</td><td>2024款</td><td>2024</td><td>B</td><td>奥迪Q5</td></tr>
+      <tr class="alt"><td>231</td><td>2024款 2025款 2026款</td><td>2024-2026</td><td>B</td><td>阿尔法罗密欧</td></tr>
+      <tr><td>269</td><td>2023款（常规加长款）2025款 2026款</td><td>2023-2026</td><td>A</td><td>林肯Z</td></tr>
+      <tr class="alt"><td>280</td><td>2024款</td><td>2024</td><td>A</td><td>奥迪Q5</td></tr>
+      <tr><td>269</td><td>2026款（常规加长款）</td><td>2026</td><td>A</td><td>问界M9</td></tr>
+    </table>
+    <div class="sb">支架 300 · 品牌 269 · 车型 1,479 · 适配记录 6,086 · 校验 10,804 · 数据时间 2026-10-24 16:13</div>
+  </div>
+</div>
+<h4>色值</h4>
+<table>
+  <tr><th>语义</th><th>现状</th><th>A 方案</th></tr>
+  <tr><td>窗口底 bg</td><td class="mono">#202020</td><td class="mono">#2c2c2c <span class="sw" style="background:#2c2c2c"></span></td></tr>
+  <tr><td>面板 panel（工具栏 / 状态栏）</td><td class="mono">#2b2b2b</td><td class="mono">#363636 <span class="sw" style="background:#363636"></span></td></tr>
+  <tr><td>卡片 card（表格正文 / 卡片）</td><td class="mono">#2d2d2d</td><td class="mono">#3a3a3a <span class="sw" style="background:#3a3a3a"></span></td></tr>
+  <tr><td>输入框 input</td><td class="mono">#1f1f1f</td><td class="mono">#262626 <span class="sw" style="background:#262626"></span></td></tr>
+  <tr><td>斑马行 alt</td><td class="mono">#313131</td><td class="mono">#434343 <span class="sw" style="background:#434343"></span></td></tr>
+  <tr><td>表头 header</td><td class="mono">#333333</td><td class="mono">#484848 <span class="sw" style="background:#484848"></span></td></tr>
+  <tr><td>描边 border</td><td class="mono">#3d3d3d</td><td class="mono">#4c4c4c <span class="sw" style="background:#4c4c4c"></span></td></tr>
+  <tr><td>正文 text / 强调 accent</td><td class="mono">#e6e6e6 / #4cc2ff</td><td class="mono">#f2f2f2 / #6cc9ff</td></tr>
+</table>
+<div class="card">
+  <b>优点</b>：整体亮度 +12 级，屏幕不刺眼的同时明显比现在亮；品牌蓝（accent）不需要重选；照片在深底上仍然对比强。
+</div>
+<blockquote><b>缺点</b>：如果显示器亮度偏低，还是「深色主题」的观感，变化幅度偏保守。</blockquote>
+
+<h2 id="s3">3. 方案 B 中性石墨（Graphite）<span class="badge ok">亮得明显</span></h2>
+<div class="win win-b">
+  <div class="tb"><span class="tt">KY 支架查询</span><span class="ts">　康业后视镜支架适配库　</span><span class="sea">全局搜索：品牌 / 车型 / 支架号（回车）</span></div>
+  <div class="tabs"><span class="tab on">按车型查</span><span class="tab">按支架查</span></div>
+  <div class="page">
+    <div class="prow"><span class="ptitle">按车型查支架</span><span class="pmono">model → bracket</span><span class="phint">主视图：先用 5 张（维度），缩放 80% 大屏可查</span></div>
+    <div class="frow"><span class="combo">AIRCROSS填充</span><span class="inp">　</span><span class="combo" style="width:120px">年份（可选）</span><span class="btn">查询</span><span class="minus">7 条记录 · 3 个支架</span></div>
+    <div class="cards">
+      <div class="acard"><div class="no">280 号</div><div class="pic">支架图</div><div class="cap">2024-2026 B</div></div>
+      <div class="acard"><div class="no">231 号</div><div class="pic">支架图</div><div class="cap">2024-2026 B</div></div>
+      <div class="acard"><div class="no">269 号</div><div class="pic">支架图</div><div class="cap">2024-2026 A</div></div>
+    </div>
+    <table class="app">
+      <tr><th style="width:80px">支架号</th><th style="width:210px">年款（原文）</th><th style="width:130px">行一化区间</th><th style="width:70px">来源</th><th>车型</th></tr>
+      <tr><td>280</td><td>2024款</td><td>2024</td><td>B</td><td>奥迪Q5</td></tr>
+      <tr class="alt"><td>231</td><td>2024款 2025款 2026款</td><td>2024-2026</td><td>B</td><td>阿尔法罗密欧</td></tr>
+      <tr><td>269</td><td>2023款（常规加长款）2025款 2026款</td><td>2023-2026</td><td>A</td><td>林肯Z</td></tr>
+      <tr class="alt"><td>280</td><td>2024款</td><td>2024</td><td>A</td><td>奥迪Q5</td></tr>
+      <tr><td>269</td><td>2026款（常规加长款）</td><td>2026</td><td>A</td><td>问界M9</td></tr>
+    </table>
+    <div class="sb">支架 300 · 品牌 269 · 车型 1,479 · 适配记录 6,086 · 校验 10,804 · 数据时间 2026-10-24 16:13</div>
+  </div>
+</div>
+<h4>色值</h4>
+<table>
+  <tr><th>语义</th><th>现状</th><th>B 方案</th></tr>
+  <tr><td>窗口底 bg</td><td class="mono">#202020</td><td class="mono">#383838 <span class="sw" style="background:#383838"></span></td></tr>
+  <tr><td>面板 panel</td><td class="mono">#2b2b2b</td><td class="mono">#424242 <span class="sw" style="background:#424242"></span></td></tr>
+  <tr><td>卡片 card</td><td class="mono">#2d2d2d</td><td class="mono">#474747 <span class="sw" style="background:#474747"></span></td></tr>
+  <tr><td>输入框 input</td><td class="mono">#1f1f1f</td><td class="mono">#323232 <span class="sw" style="background:#323232"></span></td></tr>
+  <tr><td>斑马行 alt</td><td class="mono">#313131</td><td class="mono">#515151 <span class="sw" style="background:#515151"></span></td></tr>
+  <tr><td>表头 header</td><td class="mono">#333333</td><td class="mono">#575757 <span class="sw" style="background:#575757"></span></td></tr>
+  <tr><td>描边 border</td><td class="mono">#3d3d3d</td><td class="mono">#606060 <span class="sw" style="background:#606060"></span></td></tr>
+  <tr><td>正文 text / 强调 accent</td><td class="mono">#e6e6e6 / #4cc2ff</td><td class="mono">#f5f5f5 / #7ad0ff</td></tr>
+</table>
+<div class="card">
+  <b>优点</b>：亮度提升约 +24 级，肉眼能明确感到「变亮」，但仍是暗色主题，晚上看不刺眼；斑马纹与表头的层次更清楚。
+</div>
+<blockquote><b>缺点</b>：中灰底上白色正文（#f5f5f5）对比度约 8.9:1，仍达标但视觉偏「灰蒙蒙」；浅色支架照片边缘会和中灰底接近，卡片边界要靠描边撑。</blockquote>
+
+<h2 id="s4">4. 方案 C 浅色（Light Theme）</h2>
+<div class="win win-c">
+  <div class="tb"><span class="tt">KY 支架查询</span><span class="ts">　康业后视镜支架适配库　</span><span class="sea">全局搜索：品牌 / 车型 / 支架号（回车）</span></div>
+  <div class="tabs"><span class="tab on">按车型查</span><span class="tab">按支架查</span></div>
+  <div class="page">
+    <div class="prow"><span class="ptitle">按车型查支架</span><span class="pmono">model → bracket</span><span class="phint">主视图：先用 5 张（维度），缩放 80% 大屏可查</span></div>
+    <div class="frow"><span class="combo">AIRCROSS填充</span><span class="inp">　</span><span class="combo" style="width:120px">年份（可选）</span><span class="btn">查询</span><span class="minus">7 条记录 · 3 个支架</span></div>
+    <div class="cards">
+      <div class="acard"><div class="no">280 号</div><div class="pic">支架图</div><div class="cap">2024-2026 B</div></div>
+      <div class="acard"><div class="no">231 号</div><div class="pic">支架图</div><div class="cap">2024-2026 B</div></div>
+      <div class="acard"><div class="no">269 号</div><div class="pic">支架图</div><div class="cap">2024-2026 A</div></div>
+    </div>
+    <table class="app">
+      <tr><th style="width:80px">支架号</th><th style="width:210px">年款（原文）</th><th style="width:130px">行一化区间</th><th style="width:70px">来源</th><th>车型</th></tr>
+      <tr><td>280</td><td>2024款</td><td>2024</td><td>B</td><td>奥迪Q5</td></tr>
+      <tr class="alt"><td>231</td><td>2024款 2025款 2026款</td><td>2024-2026</td><td>B</td><td>阿尔法罗密欧</td></tr>
+      <tr><td>269</td><td>2023款（常规加长款）2025款 2026款</td><td>2023-2026</td><td>A</td><td>林肯Z</td></tr>
+      <tr class="alt"><td>280</td><td>2024款</td><td>2024</td><td>A</td><td>奥迪Q5</td></tr>
+      <tr><td>269</td><td>2026款（常规加长款）</td><td>2026</td><td>A</td><td>问界M9</td></tr>
+    </table>
+    <div class="sb">支架 300 · 品牌 269 · 车型 1,479 · 适配记录 6,086 · 校验 10,804 · 数据时间 2026-10-24 16:13</div>
+  </div>
+</div>
+<h4>色值</h4>
+<table>
+  <tr><th>语义</th><th>现状</th><th>C 方案</th></tr>
+  <tr><td>窗口底 bg</td><td class="mono">#202020</td><td class="mono">#f3f3f3 <span class="sw" style="background:#f3f3f3"></span></td></tr>
+  <tr><td>面板 panel</td><td class="mono">#2b2b2b</td><td class="mono">#fafafa <span class="sw" style="background:#fafafa"></span></td></tr>
+  <tr><td>卡片 card</td><td class="mono">#2d2d2d</td><td class="mono">#ffffff <span class="sw" style="background:#ffffff"></span></td></tr>
+  <tr><td>斑马行 alt / 表头</td><td class="mono">#313131 / #333333</td><td class="mono">#f7f7f7 / #ececec</td></tr>
+  <tr><td>描边 border</td><td class="mono">#3d3d3d</td><td class="mono">#d4d4d4 <span class="sw" style="background:#d4d4d4"></span></td></tr>
+  <tr><td>正文 text / 次要 dim</td><td class="mono">#e6e6e6 / #a0a0a0</td><td class="mono">#1d1d1d / #5c5c5c</td></tr>
+  <tr><td>强调 accent（文字）/ 按钮底</td><td class="mono">#4cc2ff / #0078d4</td><td class="mono">#0f6cbd / #0f6cbd</td></tr>
+</table>
+<div class="card">
+  <b>优点</b>：白天办公环境最清楚；和 Excel / 网页看数据的习惯一致；打印或截图给客户时不用反色。
+</div>
+<blockquote><b>缺点</b>：属于换风格而不是「调亮」，改动面最大（需要同时改 5 处硬编码颜色 + accent 换深蓝）；白色支架照片在白底上几乎看不出边界，必须给图片区加浅灰底（#f7f7f7）与 1px 描边。</blockquote>
+
+<h2 id="s5">5. 四套对照表</h2>
+<table>
+  <tr>
+    <th style="width:150px">维度</th><th>现状</th><th>A 提亮深灰</th><th>B 中性石墨</th><th>C 浅色</th>
+  </tr>
+  <tr><td>整体亮度</td><td>很深（#202020）</td><td>深灰（#2c2c2c）</td><td>中灰（#383838）</td><td>亮（#f3f3f3）</td></tr>
+  <tr><td>正文对比度</td><td>约 13:1</td><td>约 13:1</td><td>约 8.9:1</td><td>约 15:1</td></tr>
+  <tr><td>照片观感</td><td>突出</td><td>突出</td><td>一般（浅色件边缘弱）</td><td>弱，需补灰底</td></tr>
+  <tr><td>是否暗色主题</td><td>是</td><td>是</td><td>是</td><td>否</td></tr>
+  <tr><td>改动文件数</td><td>—</td><td>3 个（config / theme / ui）</td><td>3 个（config / theme / ui）</td><td>3 个 + accent 重选</td></tr>
+  <tr><td>回退难度</td><td>—</td><td>低（只改色值常量）</td><td>低</td><td>低，但需重调对照</td></tr>
+</table>
+
+<h2 id="s6">6. 实现影响面（三套相同）</h2>
+<p>问题在于现在的颜色<b>没有全部集中</b>：<code>config.C</code> 只管了 12 个语义色，另有 5 处硬编码色写在 QSS 里、2 处写在 <code>ui.py</code> 里。要换亮度必须先把它们抽成变量，否则会出现「底色变了、斑马纹还是旧灰」的花斑问题。</p>
+<table>
+  <tr><th style="width:200px">位置</th><th>现状</th><th>计划</th></tr>
+  <tr><td><code>config.C</code></td><td>bg / panel / panel2 / card / border / text / dim / faint / accent / accent_bg …</td><td>新增 <code>input / alt_row / header / scroll / on_accent</code> 五个键，随方案取值</td></tr>
+  <tr><td><code>theme.py</code> 输入框</td><td class="mono">background: #1f1f1f</td><td>改 <code>@input</code></td></tr>
+  <tr><td><code>theme.py</code> 表格斑马 / 表头 / 按钮 hover / 列表 hover</td><td class="mono">#313131、#333333 ×3</td><td>改 <code>@alt_row</code>、<code>@header</code></td></tr>
+  <tr><td><code>theme.py</code> 滚动条</td><td class="mono">#4a4a4a、#5e5e5e</td><td>改 <code>@scroll</code>、<code>@scroll_hover</code></td></tr>
+  <tr><td><code>theme.py</code> 选中文字</td><td class="mono">#ffffff ×3</td><td>改 <code>@on_accent</code>（浅色方案下用深字）</td></tr>
+  <tr><td><code>ui.py</code> 图片占位底</td><td class="mono">background:#1f1f1f ×2</td><td>改 <code>config.C["input"]</code></td></tr>
+</table>
+<div class="card">
+  验证方式：改完用 <code>QT_QPA_PLATFORM=offscreen</code> 先跑一次构建自检，再由你确认后启动真实窗口截图对比（不自动改你桌面上正在运行的实例）。
+</div>
+
+<h2 id="s7">7. 选择建议</h2>
+<table>
+  <tr><th style="width:140px">你的感受</th><th>建议</th></tr>
+  <tr><td>「就是有点闷，别太黑」</td><td><b>A 提亮深灰</b>：最稳，风险最小</td></tr>
+  <tr><td>「要明显亮，但晚上也别刺眼」</td><td><b>B 中性石墨</b>：推荐区间</td></tr>
+  <tr><td>「白天在办公室看不清，干脆白底」</td><td><b>C 浅色</b></td></tr>
+</table>
+<blockquote>另外可选的折中做法：<b>跟随系统</b>（Windows 深/浅色自动切换），但要维护两套色值，工作量约为单套的 2 倍；如果你日常固定一台机器，不建议上。</blockquote>
+
+</body>
+</html>
